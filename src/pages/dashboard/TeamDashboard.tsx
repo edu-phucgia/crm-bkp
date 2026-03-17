@@ -1,4 +1,5 @@
 import React from 'react';
+import * as XLSX from 'xlsx';
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, BarChart, Cell
@@ -9,7 +10,64 @@ import {
   LineChart as LineChartIcon, Handshake,
   Users, DollarSign, PieChart, Activity
 } from 'lucide-react';
-import { useDashboardStats } from '../../hooks/useDashboardStats';
+import { useDashboardStats, type DashboardStats } from '../../hooks/useDashboardStats';
+
+function exportToExcel(data: DashboardStats) {
+  const wb = XLSX.utils.book_new();
+  const month = `${new Date().getMonth() + 1}/${new Date().getFullYear()}`;
+
+  // ── Sheet 1: KPI tổng quan ─────────────────────────────────────────────────
+  const kpiRows = [
+    ['BÁO CÁO KINH DOANH PHÚC GIA', '', `Tháng ${month}`],
+    [],
+    ['CHỈ SỐ KPI', 'GIÁ TRỊ'],
+    ['Doanh thu tháng (VNĐ)',    data.kpi.monthlyRevenue],
+    ['Deals mới trong tuần',     data.kpi.newDealsWeek],
+    ['Tỷ lệ chốt (%)',           +data.kpi.closingRate.toFixed(2)],
+    ['Nhóm Zalo đang hoạt động', data.kpi.activeZaloGroups],
+    [],
+    ['CẢNH BÁO', 'SỐ LƯỢNG'],
+    ['Vi phạm SLA hôm nay',       data.alerts.slaViolations],
+    ['HĐ sắp hết hạn (30 ngày)',  data.alerts.expiringContracts],
+  ];
+  const wsKpi = XLSX.utils.aoa_to_sheet(kpiRows);
+  wsKpi['!cols'] = [{ wch: 36 }, { wch: 22 }, { wch: 16 }];
+  wsKpi['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }];
+  XLSX.utils.book_append_sheet(wb, wsKpi, 'KPI Tổng quan');
+
+  // ── Sheet 2: Hiệu suất nhân viên ──────────────────────────────────────────
+  const perfHeader = ['Nhân viên', 'Email', 'Target (VNĐ)', 'Thực tế (VNĐ)', '% HT', 'Số deals', 'Win Rate (%)'];
+  const perfRows = data.employeePerformance.map(e => [
+    e.name,
+    e.email,
+    e.targetMonthly,
+    e.actualRevenue,
+    +e.completionRate.toFixed(2),
+    e.dealsCount,
+    +e.winRate.toFixed(2),
+  ]);
+  const wsPerf = XLSX.utils.aoa_to_sheet([perfHeader, ...perfRows]);
+  wsPerf['!cols'] = [{ wch: 22 }, { wch: 28 }, { wch: 18 }, { wch: 18 }, { wch: 10 }, { wch: 10 }, { wch: 14 }];
+  XLSX.utils.book_append_sheet(wb, wsPerf, 'Hiệu suất nhân viên');
+
+  // ── Sheet 3: Doanh thu 12 tháng ───────────────────────────────────────────
+  const revHeader = ['Tháng', 'Doanh thu (VNĐ)', 'Số đơn hàng'];
+  const revRows = data.revenueChart.map(r => [r.month, r.revenue, r.orders]);
+  const wsRev = XLSX.utils.aoa_to_sheet([revHeader, ...revRows]);
+  wsRev['!cols'] = [{ wch: 12 }, { wch: 20 }, { wch: 14 }];
+  XLSX.utils.book_append_sheet(wb, wsRev, 'Doanh thu 12 tháng');
+
+  // ── Sheet 4: Pipeline Funnel ──────────────────────────────────────────────
+  const funnelHeader = ['Giai đoạn', 'Số deals', 'Tổng giá trị (VNĐ)'];
+  const funnelRows = data.pipelineFunnel.map(f => [f.stage, f.count, f.value]);
+  const wsFunnel = XLSX.utils.aoa_to_sheet([funnelHeader, ...funnelRows]);
+  wsFunnel['!cols'] = [{ wch: 18 }, { wch: 12 }, { wch: 22 }];
+  XLSX.utils.book_append_sheet(wb, wsFunnel, 'Pipeline Funnel');
+
+  // ── Export ────────────────────────────────────────────────────────────────
+  const fileName = `BaoCao_PGL_T${new Date().getMonth() + 1}_${new Date().getFullYear()}.xlsx`;
+  XLSX.writeFile(wb, fileName);
+}
 import { Card, CardContent, CardHeader, CardTitle } from '../../app/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../app/components/ui/table';
 import { Progress } from '../../app/components/ui/progress';
@@ -71,7 +129,10 @@ export default function TeamDashboard() {
             <Calendar size={14} className="text-muted-foreground" />
             <span>Tháng {new Date().getMonth() + 1}/{new Date().getFullYear()}</span>
           </Badge>
-          <button className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:shadow-lg transition-all text-sm font-medium">
+          <button
+            onClick={() => exportToExcel(data)}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:shadow-lg transition-all text-sm font-medium"
+          >
             <Download size={16} />
             Xuất báo cáo
           </button>
