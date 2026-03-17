@@ -56,12 +56,26 @@ export function useTasks() {
         .eq('id', taskId);
       if (error) throw error;
     },
+    onMutate: async ({ taskId, status }) => {
+      await queryClient.cancelQueries({ queryKey: ['tasks'] });
+      const previousTasks = queryClient.getQueryData<Task[]>(['tasks']);
+      queryClient.setQueryData<Task[]>(['tasks'], (old) => {
+        if (!old) return old;
+        return old.map(t => t.id === taskId ? { ...t, status: status as Task['status'] } : t);
+      });
+      return { previousTasks };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
       toast.success('Cập nhật trạng thái nhiệm vụ thành công');
     },
-    onError: (error) => {
+    onError: (error, _variables, context) => {
+      if (context?.previousTasks) {
+        queryClient.setQueryData(['tasks'], context.previousTasks);
+      }
       toast.error(`Lỗi cập nhật trạng thái nhiệm vụ: ${error.message}`);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
     }
   });
 

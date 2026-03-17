@@ -1,13 +1,15 @@
+import { useState } from 'react';
 import {
   AlertCircle,
   Clock, ChevronRight, Flag, Calendar,
-  CheckCircle2, Square, Circle,
+  CheckCircle2, Square, Circle, Maximize2, Minimize2,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStats } from '../../hooks/useDashboardStats';
 import { useTasks } from '../../hooks/useTasks';
 import { usePipelineDeals } from '../../hooks/usePipelineDeals';
 import { ComponentLoading } from './ComponentLoading';
+import { useNavigationStore } from '../../hooks/useNavigation';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const TODAY = new Date();
@@ -38,6 +40,7 @@ const dealStages: Record<string, { label: string; color: string; bg: string }> =
   'chot_hd': { label: 'Chốt HĐ', color: '#0E7C6B', bg: '#f0fdf9' },
   'lead': { label: 'Lead', color: '#94a3b8', bg: '#f1f5f9' },
   'dang_tn': { label: 'Đang TN', color: '#059669', bg: '#d1fae5' },
+  'hoan_thanh': { label: 'Hoàn thành', color: '#059669', bg: '#d1fae5' },
 };
 
 const WEEK_DAYS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
@@ -117,6 +120,9 @@ function DonutChart({ done, total }: { done: number; total: number }) {
 
 export function PersonalDashboard() {
   const { user } = useAuth();
+  const { setActiveTab, setHighlightDealId } = useNavigationStore();
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [calendarExpanded, setCalendarExpanded] = useState(false);
   
   // Real API Calls
   const { data: statsData, isLoading: isLoadingStats } = useDashboardStats();
@@ -163,10 +169,27 @@ export function PersonalDashboard() {
     deals: dealsInStage,
   }));
 
-  // Map Upcoming Tasks to Events
+  // Map Upcoming Tasks + Deals to Calendar Events
   const upcomingTasks = tasks
     .filter(t => t.due_date && daysDiff(t.due_date) >= 0 && daysDiff(t.due_date) <= 7 && t.status !== 'done')
     .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime());
+
+  const upcomingDeals = deals
+    .filter(d => d.expected_close_date && daysDiff(d.expected_close_date) >= 0 && daysDiff(d.expected_close_date) <= 7)
+    .sort((a, b) => new Date(a.expected_close_date!).getTime() - new Date(b.expected_close_date!).getTime());
+
+  type CalendarEvent =
+    | { kind: 'task'; id: string; title: string; date: string; priority: string }
+    | { kind: 'deal'; id: string; title: string; date: string; value: number; stage: string };
+
+  const calendarEvents: CalendarEvent[] = [
+    ...upcomingTasks.map(t => ({ kind: 'task' as const, id: t.id, title: t.title, date: t.due_date!, priority: t.priority })),
+    ...upcomingDeals.map(d => ({ kind: 'deal' as const, id: d.id, title: d.title, date: d.expected_close_date!, value: d.value, stage: d.stage })),
+  ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  const visibleEvents = selectedDate
+    ? calendarEvents.filter(e => new Date(e.date).toDateString() === new Date(selectedDate).toDateString())
+    : calendarEvents;
 
   return (
     <div className="p-6 space-y-6" style={{ backgroundColor: 'var(--background)' }}>
@@ -265,7 +288,7 @@ export function PersonalDashboard() {
               <AlertCircle size={22} strokeWidth={1.5} style={{ color: '#991F1F' }} />
             </div>
           </div>
-          <button className="mt-4 w-full flex items-center justify-center gap-1.5 py-2 rounded-lg" style={{ backgroundColor: '#fef2f2', color: '#991F1F', fontSize: 'var(--text-sm)', fontWeight: 500 }}>
+          <button onClick={() => setActiveTab('sla')} className="mt-4 cursor-pointer w-full flex items-center justify-center gap-1.5 py-2 rounded-lg" style={{ backgroundColor: '#fef2f2', color: '#991F1F', fontSize: 'var(--text-sm)', fontWeight: 500 }}>
             Xem chi tiết vi phạm <ChevronRight size={13} strokeWidth={2} />
           </button>
         </div>
@@ -331,7 +354,7 @@ export function PersonalDashboard() {
                     const diff = daysDiff(deal.expected_close_date);
                     const urgent = diff <= 7;
                     return (
-                      <div key={deal.id} className="rounded-lg px-3.5 py-3 flex items-start justify-between gap-3 cursor-pointer hover:shadow-sm transition-shadow" style={{ backgroundColor: urgent ? '#fff9f9' : '#f8fafc', border: `1px solid ${urgent ? '#fecaca' : '#e2e8f0'}` }}>
+                      <div key={deal.id} className="rounded-lg px-3.5 py-3 flex items-start justify-between gap-3 cursor-pointer hover:shadow-sm transition-shadow" style={{ backgroundColor: urgent ? '#fff9f9' : '#f8fafc', border: `1px solid ${urgent ? '#fecaca' : '#e2e8f0'}` }} onClick={() => { setHighlightDealId(deal.id); setActiveTab('pipeline'); }}>
                         <div className="min-w-0 flex-1">
                           <p className="truncate" style={{ color: 'var(--foreground)', fontSize: 'var(--text-sm)', fontWeight: 500 }}>
                             {deal.title}
@@ -364,9 +387,9 @@ export function PersonalDashboard() {
         </div>
 
         {/* RIGHT: Task list + Mini week calendar */}
-        <div className="flex flex-col gap-5 h-[500px]">
-          
-          <div className="rounded-lg overflow-hidden flex flex-col h-1/2" style={{ backgroundColor: 'var(--card)', boxShadow: 'var(--shadow-card)' }}>
+        <div className="flex flex-col gap-5" style={{ height: calendarExpanded ? 'auto' : '500px' }}>
+
+          <div className="rounded-lg overflow-hidden flex flex-col" style={{ backgroundColor: 'var(--card)', boxShadow: 'var(--shadow-card)', height: calendarExpanded ? 'auto' : '50%', minHeight: 0 }}>
             <div className="px-5 py-4 border-b flex items-center justify-between shrink-0" style={{ borderColor: 'var(--border)' }}>
               <h2 style={{ color: 'var(--foreground)', fontSize: 'var(--text-lg)' }}>Tất cả Nhiệm vụ</h2>
             </div>
@@ -397,20 +420,41 @@ export function PersonalDashboard() {
             </div>
           </div>
 
-          <div className="rounded-lg overflow-hidden flex flex-col h-1/2" style={{ backgroundColor: 'var(--card)', boxShadow: 'var(--shadow-card)' }}>
-            <div className="px-5 py-4 border-b shrink-0" style={{ borderColor: 'var(--border)' }}>
+          <div className="rounded-lg overflow-hidden flex flex-col" style={{ backgroundColor: 'var(--card)', boxShadow: 'var(--shadow-card)', height: calendarExpanded ? 'auto' : '50%', minHeight: 0 }}>
+            <div className="px-5 py-4 border-b shrink-0 flex items-center justify-between" style={{ borderColor: 'var(--border)' }}>
               <h2 style={{ color: 'var(--foreground)', fontSize: 'var(--text-lg)' }}>Tiến độ 7 ngày tới</h2>
+              <button
+                onClick={() => setCalendarExpanded(v => !v)}
+                className="p-1.5 rounded-md hover:bg-slate-100 transition-colors"
+                title={calendarExpanded ? 'Thu gọn' : 'Mở rộng'}
+              >
+                {calendarExpanded
+                  ? <Minimize2 size={15} style={{ color: 'var(--muted-foreground)' }} />
+                  : <Maximize2 size={15} style={{ color: 'var(--muted-foreground)' }} />
+                }
+              </button>
             </div>
             <div className="px-5 py-3 shrink-0">
               <div className="grid grid-cols-7 gap-1">
                 {weekDates.map((date, i) => {
                   const isToday = date.toDateString() === TODAY.toDateString();
-                  const hasEvent = upcomingTasks.some((e) => e.due_date && new Date(e.due_date).toDateString() === date.toDateString());
+                  const isSelected = !!selectedDate && new Date(selectedDate).toDateString() === date.toDateString();
+                  const hasEvent = calendarEvents.some((e) => new Date(e.date).toDateString() === date.toDateString());
                   return (
-                    <div key={i} className="flex flex-col items-center gap-1">
+                    <div
+                      key={i}
+                      className="flex flex-col items-center gap-1 cursor-pointer"
+                      onClick={() => setSelectedDate(isSelected ? null : date.toISOString())}
+                    >
                       <span style={{ color: 'var(--muted-foreground)', fontSize: 10, fontWeight: 500, textTransform: 'uppercase' }}>{WEEK_DAYS[date.getDay()]}</span>
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center relative" style={{ backgroundColor: isToday ? '#1A4F9C' : 'transparent' }}>
-                        <span style={{ color: isToday ? '#fff' : 'var(--foreground)', fontSize: 'var(--text-sm)', fontWeight: isToday ? 700 : 400 }}>
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center relative transition-colors"
+                        style={{
+                          backgroundColor: isToday ? '#1A4F9C' : isSelected ? '#dbeafe' : 'transparent',
+                          border: isSelected && !isToday ? '1.5px solid #1A4F9C' : undefined,
+                        }}
+                      >
+                        <span style={{ color: isToday ? '#fff' : isSelected ? '#1A4F9C' : 'var(--foreground)', fontSize: 'var(--text-sm)', fontWeight: isToday || isSelected ? 700 : 400 }}>
                           {date.getDate()}
                         </span>
                         {hasEvent && !isToday && <div className="absolute bottom-0.5 w-1 h-1 rounded-full bg-blue-500" />}
@@ -420,21 +464,27 @@ export function PersonalDashboard() {
                 })}
               </div>
             </div>
-            <div className="px-5 pb-4 pt-2 space-y-2 flex-1 overflow-y-auto" style={{ borderTop: '1px solid var(--border)' }}>
-              {upcomingTasks.map((t) => (
-                <div key={t.id} className="flex items-center gap-3 rounded-lg px-3 py-2.5" style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
-                  <div className="w-1 self-stretch rounded-full flex-shrink-0" style={{ backgroundColor: '#1A4F9C', minHeight: 28 }} />
+            <div className="px-5 pb-4 pt-2 space-y-2 overflow-y-auto" style={{ borderTop: '1px solid var(--border)', flex: calendarExpanded ? 'none' : '1' }}>
+              {visibleEvents.map((e) => (
+                <div key={e.kind + e.id} className="flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer hover:shadow-sm transition-shadow" style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }} onClick={() => { if (e.kind === 'deal') { setHighlightDealId(e.id); setActiveTab('pipeline'); } else { setActiveTab('tasks'); } }}>
+                  <div className="w-1 self-stretch rounded-full flex-shrink-0" style={{ backgroundColor: e.kind === 'deal' ? '#0E7C6B' : '#1A4F9C', minHeight: 28 }} />
                   <div className="flex-1 min-w-0">
-                    <p style={{ color: 'var(--foreground)', fontSize: 'var(--text-sm)', fontWeight: 500 }}>{t.title}</p>
-                    <p style={{ color: 'var(--muted-foreground)', fontSize: 'var(--text-xs)', marginTop: 1 }}>{formatDate(t.due_date)}</p>
+                    <p style={{ color: 'var(--foreground)', fontSize: 'var(--text-sm)', fontWeight: 500 }}>{e.title}</p>
+                    <p style={{ color: 'var(--muted-foreground)', fontSize: 'var(--text-xs)', marginTop: 1 }}>
+                      {e.kind === 'deal'
+                        ? `${dealStages[e.stage]?.label ?? e.stage} · ${(e.value / 1000000).toFixed(0)}tr ₫`
+                        : formatDate(e.date)}
+                    </p>
                   </div>
-                  <span className="flex-shrink-0 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-semibold">
-                    +{daysDiff(t.due_date)} ngày
+                  <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold ${e.kind === 'deal' ? 'bg-emerald-50 text-emerald-700' : 'bg-blue-50 text-blue-700'}`}>
+                    {e.kind === 'deal' ? 'Deal' : 'Task'} +{daysDiff(e.date)}n
                   </span>
                 </div>
               ))}
-              {upcomingTasks.length === 0 && (
-                <div className="text-center text-sm text-gray-500 py-2">Trống lịch</div>
+              {visibleEvents.length === 0 && (
+                <div className="text-center text-sm text-gray-500 py-2">
+                  {selectedDate ? 'Không có sự kiện ngày này' : 'Trống lịch'}
+                </div>
               )}
             </div>
           </div>

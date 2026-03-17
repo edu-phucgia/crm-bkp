@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -34,6 +34,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { differenceInDays, parseISO, format } from 'date-fns';
 import { AddDealDialog } from './AddDealDialog';
 import { EditDealDialog } from './EditDealDialog';
+import { useNavigationStore } from '../../hooks/useNavigation';
 
 // ─── STAGES ───────────────────────────────────────────────────────────────────
 
@@ -193,6 +194,8 @@ interface DealCardProps {
 }
 
 function DealCard({ deal, onEdit, onDelete, isOverlay }: DealCardProps) {
+  const { highlightDealId } = useNavigationStore();
+  const isHighlighted = !isOverlay && highlightDealId === deal.id;
   const daysLeft = getDaysInfo(deal.expected_close_date);
   const isOverdue = daysLeft !== null && daysLeft < 0;
   const isUrgent = daysLeft !== null && daysLeft >= 0 && daysLeft < 7;
@@ -211,8 +214,14 @@ function DealCard({ deal, onEdit, onDelete, isOverlay }: DealCardProps) {
 
   return (
     <Card
+      id={`deal-${deal.id}`}
       className={`group relative transition-shadow border-l-4 ${isOverlay ? 'shadow-xl rotate-1' : 'hover:shadow-md'}`}
-      style={{ borderLeftColor: borderColor }}
+      style={{
+        borderLeftColor: borderColor,
+        boxShadow: isHighlighted ? '0 0 0 2px #f59e0b, 0 0 20px rgba(245,158,11,0.5)' : undefined,
+        backgroundColor: isHighlighted ? '#fffbeb' : undefined,
+        transition: 'box-shadow 0.4s ease',
+      }}
     >
       <CardContent className="p-0">
         {/* Drag handle — visual only, drag is handled by wrapper */}
@@ -251,13 +260,24 @@ function DealCard({ deal, onEdit, onDelete, isOverlay }: DealCardProps) {
 
           <div className="flex items-center justify-between">
             <p className="text-xs font-bold text-primary">{formatVND(Number(deal.value))}</p>
-            <Badge
-              variant="outline"
-              className="text-[9px] px-1.5 py-0 border leading-none h-4"
-              style={{ backgroundColor: productStyle.bg, color: productStyle.text, borderColor: productStyle.border }}
-            >
-              {PRODUCT_LABELS[deal.product_type] || 'Khác'}
-            </Badge>
+            <div className="flex items-center gap-1">
+              {deal.payment_status === 'chua_tam_ung' && (
+                <span className="text-[9px] px-1.5 py-0 rounded-full leading-none h-4 flex items-center font-semibold bg-red-50 text-red-600 border border-red-200">Chưa TU</span>
+              )}
+              {deal.payment_status === 'tam_ung_50' && (
+                <span className="text-[9px] px-1.5 py-0 rounded-full leading-none h-4 flex items-center font-semibold bg-amber-50 text-amber-700 border border-amber-200">TU 50%</span>
+              )}
+              {deal.payment_status === 'thanh_toan_du' && (
+                <span className="text-[9px] px-1.5 py-0 rounded-full leading-none h-4 flex items-center font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">TT đủ</span>
+              )}
+              <Badge
+                variant="outline"
+                className="text-[9px] px-1.5 py-0 border leading-none h-4"
+                style={{ backgroundColor: productStyle.bg, color: productStyle.text, borderColor: productStyle.border }}
+              >
+                {PRODUCT_LABELS[deal.product_type] || 'Khác'}
+              </Badge>
+            </div>
           </div>
 
           <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between">
@@ -329,8 +349,19 @@ function DeleteConfirmDialog({
 export default function Pipeline() {
   const [filters, setFilters] = useState<any>({ ownerId: 'all', productType: 'all', search: '' });
   const { deals, isLoading, isError, users, updateStage, deleteDeal, isDeleting } = usePipelineDeals(filters);
+  const { highlightDealId, setHighlightDealId } = useNavigationStore();
 
   const [activeId, setActiveId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!highlightDealId) return;
+    const timer = setTimeout(() => {
+      const el = document.getElementById(`deal-${highlightDealId}`);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+    }, 150);
+    const clear = setTimeout(() => setHighlightDealId(null), 3000);
+    return () => { clearTimeout(timer); clearTimeout(clear); };
+  }, [highlightDealId]);
   const [addStage, setAddStage] = useState<string>('lead');
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
@@ -374,7 +405,10 @@ export default function Pipeline() {
         dealId: activeDeal.id,
         newStage,
         oldStage: activeDeal.stage,
-        customerId: activeDeal.customer_id
+        customerId: activeDeal.customer_id,
+        value: activeDeal.value,
+        ownerId: activeDeal.owner_id,
+        dealTitle: activeDeal.title,
       });
     }
   };

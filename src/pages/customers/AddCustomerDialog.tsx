@@ -108,12 +108,20 @@ export function AddCustomerDialog({ open, onOpenChange }: AddCustomerDialogProps
               </div>
               <div className="grid gap-2">
                 <Label>Nguồn khách hàng</Label>
-                <Input
-                  id="source"
-                  value={formData.source}
-                  onChange={(e) => setFormData({ ...formData, source: e.target.value })}
-                  placeholder="Website, Giới thiệu..."
-                />
+                <Select value={formData.source} onValueChange={(val) => setFormData({ ...formData, source: val })}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Biết đến qua..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="website">Website</SelectItem>
+                    <SelectItem value="gioi_thieu">Giới thiệu</SelectItem>
+                    <SelectItem value="zalo">Zalo</SelectItem>
+                    <SelectItem value="hoi_thao">Hội thảo / Sự kiện</SelectItem>
+                    <SelectItem value="mang_xa_hoi">Mạng xã hội</SelectItem>
+                    <SelectItem value="tim_kiem">Tìm kiếm (Google...)</SelectItem>
+                    <SelectItem value="khac">Khác</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
