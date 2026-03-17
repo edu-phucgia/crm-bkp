@@ -2,7 +2,7 @@ import { useState, FormEvent, ReactNode } from 'react';
 import {
   Building2, Phone, Mail,
   ArrowLeft, FileText, ClipboardList, ShieldAlert,
-  DollarSign, Target, User as UserIcon, Zap
+  DollarSign, Target, User as UserIcon, Zap, Radio
 } from 'lucide-react';
 import { useCustomerDetail } from '../../hooks/useCustomers';
 import { Button } from '../../app/components/ui/button';
@@ -22,6 +22,16 @@ interface CustomerDetailProps {
 
 const formatVND = (n: number) =>
   n.toLocaleString('vi-VN') + ' ₫';
+
+const SOURCE_LABELS: Record<string, string> = {
+  website: 'Website',
+  gioi_thieu: 'Giới thiệu',
+  zalo: 'Zalo',
+  hoi_thao: 'Hội thảo / Sự kiện',
+  mang_xa_hoi: 'Mạng xã hội',
+  tim_kiem: 'Tìm kiếm (Google...)',
+  khac: 'Khác',
+};
 
 // ── Badge tier khớp đúng enum DB: standard/silver/gold/vip ──
 const TIER_STYLE: Record<string, string> = {
@@ -168,6 +178,9 @@ export default function CustomerDetail({ id, onBack }: CustomerDetailProps) {
               <InfoRow icon={<Phone size={16} />} label="Điện thoại" value={customer.phone ?? '—'} />
               <InfoRow icon={<Mail size={16} />} label="Email" value={customer.email ?? '—'} />
               <InfoRow icon={<UserIcon size={16} />} label="Phụ trách" value={customer.sales_name ?? 'Chưa gán'} />
+              {customer.source && (
+                <InfoRow icon={<Radio size={16} />} label="Nguồn KH" value={SOURCE_LABELS[customer.source] ?? customer.source} />
+              )}
               {customer.notes && (
                 <InfoRow icon={<FileText size={16} />} label="Ghi chú" value={customer.notes} />
               )}

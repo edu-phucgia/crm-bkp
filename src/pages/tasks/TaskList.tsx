@@ -1,8 +1,7 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   DndContext,
   DragOverlay,
-  closestCorners,
   KeyboardSensor,
   PointerSensor,
   useSensor,
@@ -10,6 +9,8 @@ import {
   DragStartEvent,
   DragEndEvent,
   useDroppable,
+  pointerWithin,
+  rectIntersection,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -18,9 +19,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { 
-  Plus, Calendar, Search
-} from 'lucide-react';
+import { Plus, Calendar, Search } from 'lucide-react';
 import { useTasks, Task } from '../../hooks/useTasks';
 import { Card, CardContent } from '../../app/components/ui/card';
 import { Badge } from '../../app/components/ui/badge';
@@ -59,7 +58,6 @@ function KanbanColumn({ id, label, color, tasks }: { id: string, label: string, 
             {tasks.length}
           </Badge>
         </div>
-        <Plus size={16} className="text-slate-400 cursor-pointer hover:text-slate-600" />
       </div>
 
       <div className="flex-1 p-2 space-y-2 overflow-y-auto">
@@ -80,10 +78,15 @@ function KanbanColumn({ id, label, color, tasks }: { id: string, label: string, 
 
 function SortableTaskCard({ task }: { task: Task }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
-  const style = { transform: CSS.Translate.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    transition: isDragging ? 'none' : transition,
+    opacity: isDragging ? 0 : 1,
+    pointerEvents: isDragging ? 'none' as const : undefined,
+  };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
       <TaskCard task={task} />
     </div>
   );
@@ -94,7 +97,7 @@ function TaskCard({ task, isOverlay }: { task: Task, isOverlay?: boolean }) {
   const overdue = task.status !== 'done' && task.due_date && isPast(parseISO(task.due_date));
 
   return (
-    <Card className={`group shadow-sm hover:shadow-md transition-all cursor-grab active:cursor-grabbing ${isOverlay ? 'shadow-xl' : ''} ${isUrgent ? 'border-l-4 border-l-red-500' : ''}`}>
+    <Card className={`group shadow-sm transition-shadow ${isOverlay ? 'shadow-xl rotate-1 cursor-grabbing' : 'hover:shadow-md'} ${isUrgent ? 'border-l-4 border-l-red-500' : ''}`}>
       <CardContent className="p-3 space-y-3">
         <div className="flex justify-between items-start gap-2">
           <h4 className="text-[11px] font-bold text-slate-900 leading-tight">{task.title}</h4>
@@ -134,6 +137,12 @@ export default function TaskList() {
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
+
+  const collisionDetection = useCallback((args: Parameters<typeof pointerWithin>[0]) => {
+    const pointerCollisions = pointerWithin(args);
+    if (pointerCollisions.length > 0) return pointerCollisions;
+    return rectIntersection(args);
+  }, []);
 
   const filteredTasks = tasks.filter(t => 
     t.title.toLowerCase().includes(search.toLowerCase()) || 
@@ -197,7 +206,7 @@ export default function TaskList() {
         <div className="flex gap-6 h-full min-w-max pb-4">
           <DndContext
             sensors={sensors}
-            collisionDetection={closestCorners}
+            collisionDetection={collisionDetection}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
@@ -210,7 +219,7 @@ export default function TaskList() {
                 tasks={filteredTasks.filter(t => t.status === col.id)} 
               />
             ))}
-            <DragOverlay>
+            <DragOverlay dropAnimation={null}>
               {activeTask ? <TaskCard task={activeTask} isOverlay /> : null}
             </DragOverlay>
           </DndContext>

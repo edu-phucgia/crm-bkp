@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabase';
-import { usePipelineDeals, Deal } from '../../hooks/usePipelineDeals';
+import { usePipelineDeals, type Deal } from '../../hooks/usePipelineDeals';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../app/components/ui/dialog';
 import { Button } from '../../app/components/ui/button';
 import { Input } from '../../app/components/ui/input';
@@ -36,6 +36,7 @@ export function EditDealDialog({ deal, open, onOpenChange }: EditDealDialogProps
     value: '',
     stage: 'lead',
     product_type: 'khac',
+    payment_status: 'chua_tam_ung',
     expected_close_date: '',
     customer_id: '',
     owner_id: ''
@@ -48,6 +49,7 @@ export function EditDealDialog({ deal, open, onOpenChange }: EditDealDialogProps
         value: deal.value?.toString() || '',
         stage: deal.stage,
         product_type: deal.product_type,
+        payment_status: deal.payment_status || 'chua_tam_ung',
         expected_close_date: deal.expected_close_date ? deal.expected_close_date.substring(0, 10) : '',
         customer_id: deal.customer_id,
         owner_id: deal.owner_id || ''
@@ -65,6 +67,7 @@ export function EditDealDialog({ deal, open, onOpenChange }: EditDealDialogProps
       value: formData.value ? Number(formData.value) : 0,
       stage: formData.stage,
       product_type: formData.product_type,
+      payment_status: formData.payment_status as Deal['payment_status'],
       expected_close_date: formData.expected_close_date || undefined,
       customer_id: formData.customer_id,
       owner_id: formData.owner_id || undefined
@@ -163,6 +166,20 @@ export function EditDealDialog({ deal, open, onOpenChange }: EditDealDialogProps
                   onChange={(e) => setFormData({ ...formData, expected_close_date: e.target.value })}
                 />
               </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Trạng thái thanh toán</Label>
+              <Select value={formData.payment_status} onValueChange={(val) => setFormData({ ...formData, payment_status: val })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="chua_tam_ung">Chưa tạm ứng</SelectItem>
+                  <SelectItem value="tam_ung_50">Đã tạm ứng 50%</SelectItem>
+                  <SelectItem value="thanh_toan_du">Thanh toán đủ 100%</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="grid gap-2">

@@ -9,6 +9,7 @@ export interface Deal {
   value: number;
   stage: string;
   product_type: string;
+  payment_status: 'chua_tam_ung' | 'tam_ung_50' | 'thanh_toan_du';
   expected_close_date: string;
   customer_id: string;
   owner_id: string;
@@ -37,6 +38,61 @@ const STAGE_LABELS: Record<string, string> = {
   dang_tn: 'Đang TN',
   hoan_thanh: 'Hoàn thành'
 };
+
+function addDays(n: number) {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return d.toISOString().split('T')[0];
+}
+
+function getAutoTasks(newStage: string, dealTitle: string, ownerId: string) {
+  const base = { status: 'todo', assigned_to: ownerId };
+  switch (newStage) {
+    case 'gui_bao_gia':
+      return [{
+        ...base,
+        title: `Nhắc xác nhận báo giá: ${dealTitle}`,
+        description: 'Sau 1-2 ngày gửi báo giá, nhắc khách hàng xác nhận nếu chưa phản hồi',
+        priority: 'medium',
+        due_date: addDays(2),
+      }];
+    case 'chot_hd':
+      return [
+        {
+          ...base,
+          title: `Gửi địa chỉ nhận mẫu: ${dealTitle}`,
+          description: 'Gửi địa chỉ nhận mẫu cho KH: Cảng cạn ICD Long Biên, số 1 Huỳnh Tấn Phát, Long Biên, HN',
+          priority: 'high',
+          due_date: addDays(1),
+        },
+        {
+          ...base,
+          title: `Nhận địa chỉ trả mẫu từ KH: ${dealTitle}`,
+          description: 'Yêu cầu khách hàng cung cấp địa chỉ nhận lại mẫu sau khi thử nghiệm xong',
+          priority: 'high',
+          due_date: addDays(1),
+        },
+      ];
+    case 'dang_tn':
+      return [{
+        ...base,
+        title: `Check tạm ứng 50%: ${dealTitle}`,
+        description: 'Kiểm tra khách hàng đã tạm ứng 50% chi phí chưa. Nếu chưa, nhắc và gửi thông tin chuyển khoản ACB 896668',
+        priority: 'urgent',
+        due_date: addDays(0),
+      }];
+    case 'hoan_thanh':
+      return [{
+        ...base,
+        title: `Xác nhận thanh toán đủ 100%: ${dealTitle}`,
+        description: 'Check với Ninh/Ngọc: KH đã thanh toán đủ chưa trước khi phát hành kết quả',
+        priority: 'urgent',
+        due_date: addDays(0),
+      }];
+    default:
+      return [];
+  }
+}
 
 export function usePipelineDeals(filters: PipelineFilters) {
   const queryClient = useQueryClient();
@@ -91,7 +147,7 @@ export function usePipelineDeals(filters: PipelineFilters) {
 
   // 3. Update Deal Stage Mutation (optimistic)
   const updateStageMutation = useMutation({
-    mutationFn: async ({ dealId, newStage, oldStage, customerId }: { dealId: string, newStage: string, oldStage: string, customerId: string }) => {
+    mutationFn: async ({ dealId, newStage, oldStage, customerId, value, ownerId, dealTitle }: { dealId: string, newStage: string, oldStage: string, customerId: string, value: number, ownerId: string, dealTitle: string }) => {
       const { error: updateError } = await supabase
         .from('deals')
         .update({ stage: newStage, updated_at: new Date().toISOString() })
@@ -110,6 +166,38 @@ export function usePipelineDeals(filters: PipelineFilters) {
         });
 
       if (logError) console.error('Error logging stage change:', logError);
+
+      // Tự động tạo tasks theo quy trình khi chuyển stage
+      const autoTasks = getAutoTasks(newStage, dealTitle, ownerId);
+      if (autoTasks.length > 0) {
+        const { error: taskError } = await supabase.from('tasks').insert(autoTasks);
+        if (taskError) console.error('Error creating auto tasks:', taskError);
+      }
+
+      // Tự động tạo order khi deal chuyển sang Hoàn thành
+      if (newStage === 'hoan_thanh' && oldStage !== 'hoan_thanh') {
+        const { data: existingOrder } = await supabase
+          .from('orders')
+          .select('id')
+          .eq('deal_id', dealId)
+          .maybeSingle();
+
+        if (!existingOrder) {
+          const { error: orderError } = await supabase
+            .from('orders')
+            .insert({
+              deal_id: dealId,
+              customer_id: customerId,
+              assigned_sales_id: ownerId,
+              total_value: value,
+              status: 'completed',
+              payment_status: 'paid_full',
+              created_at: new Date().toISOString(),
+            });
+
+          if (orderError) console.error('Error creating order from deal:', orderError);
+        }
+      }
     },
     onMutate: async ({ dealId, newStage }) => {
       await queryClient.cancelQueries({ queryKey: ['pipeline-deals'] });
@@ -129,8 +217,13 @@ export function usePipelineDeals(filters: PipelineFilters) {
       }
       toast.error(`Lỗi chuyển giai đoạn: ${error.message}`);
     },
-    onSettled: () => {
+    onSettled: (_data, _err, variables) => {
       queryClient.invalidateQueries({ queryKey: ['pipeline-deals'] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      if (variables.newStage === 'hoan_thanh') {
+        queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+        queryClient.invalidateQueries({ queryKey: ['customer-orders', variables.customerId] });
+      }
     }
   });
 
@@ -144,6 +237,7 @@ export function usePipelineDeals(filters: PipelineFilters) {
           value:               deal.value,
           stage:               deal.stage || 'lead',
           product_type:        deal.product_type,
+          payment_status:      deal.payment_status || 'chua_tam_ung',
           expected_close_date: deal.expected_close_date || null,
           customer_id:         deal.customer_id,
           owner_id:            deal.owner_id || null,
@@ -173,6 +267,7 @@ export function usePipelineDeals(filters: PipelineFilters) {
           value:               deal.value ?? 0,
           stage:               deal.stage,
           product_type:        deal.product_type,
+          payment_status:      deal.payment_status,
           customer_id:         deal.customer_id,
           owner_id:            deal.owner_id ?? null,
           expected_close_date: deal.expected_close_date || null,
@@ -181,9 +276,38 @@ export function usePipelineDeals(filters: PipelineFilters) {
         .eq('id', deal.id);
 
       if (error) throw error;
+
+      // Tự động tạo order nếu save với stage Hoàn thành
+      if (deal.stage === 'hoan_thanh') {
+        const { data: existingOrder } = await supabase
+          .from('orders')
+          .select('id')
+          .eq('deal_id', deal.id)
+          .maybeSingle();
+
+        if (!existingOrder) {
+          const { error: orderError } = await supabase
+            .from('orders')
+            .insert({
+              deal_id:            deal.id,
+              customer_id:        deal.customer_id,
+              assigned_sales_id:  deal.owner_id,
+              total_value:        deal.value ?? 0,
+              status:             'completed',
+              payment_status:     'paid_full',
+              created_at:         new Date().toISOString(),
+            });
+
+          if (orderError) console.error('Error creating order from deal edit:', orderError);
+        }
+      }
     },
-    onSuccess: () => {
+    onSuccess: (_data, deal) => {
       queryClient.invalidateQueries({ queryKey: ['pipeline-deals'] });
+      if (deal.stage === 'hoan_thanh') {
+        queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+        queryClient.invalidateQueries({ queryKey: ['customer-orders', deal.customer_id] });
+      }
       toast.success('Cập nhật deal thành công');
     },
     onError: (error) => {

@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(sed -i 's/CREATE TABLE IF NOT EXISTS/CREATE TABLE/g' supabase_schema.sql)",
-      "Bash(sed -i 's/CREATE INDEX IF NOT EXISTS/CREATE INDEX/g' supabase_schema.sql)"
+      "Bash(sed -i 's/CREATE INDEX IF NOT EXISTS/CREATE INDEX/g' supabase_schema.sql)",
+      "Bash(python3 -c \":*)"
     ]
   }
 }
