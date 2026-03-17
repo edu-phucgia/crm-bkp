@@ -2,7 +2,16 @@
   "permissions": {
     "allow": [
       "Bash(sed -i 's/CREATE TABLE IF NOT EXISTS/CREATE TABLE/g' supabase_schema.sql)",
-      "Bash(sed -i 's/CREATE INDEX IF NOT EXISTS/CREATE INDEX/g' supabase_schema.sql)"
+      "Bash(sed -i 's/CREATE INDEX IF NOT EXISTS/CREATE INDEX/g' supabase_schema.sql)",
+      "Bash(ls -la /d/crm-bkp/*.sql)",
+      "Bash(grep -r 'CREATE TABLE.*zalo_groups' /d/crm-bkp --include=*.sql --include=*.ts --include=*.tsx)",
+      "Bash(grep -r \"zalo_groups\\\\|zalo_status\\\\|last_message\" /d/crm-bkp/src --include=*.ts --include=*.tsx)",
+      "Bash(grep -r \"activities\\\\|response_time\" /d/crm-bkp/src --include=*.ts --include=*.tsx)",
+      "Bash(grep -r \"CREATE TABLE\\\\|table\\(\\\\|select\\(\" /d/crm-bkp --include=*.ts --include=*.sql)",
+      "Bash(grep -r \"from.*select\\\\|\\\\.select\\(\" /d/crm-bkp/src/hooks --include=*.ts --include=*.tsx)",
+      "Bash(grep -r \"from\\(''''zalo\\\\|from\\(''''activities\\\\|from\\(''''customers\" /d/crm-bkp/src/hooks --include=*.ts)",
+      "Bash(grep -A 15 \"\\\\.select\\\\\\(\\\\`\" /d/crm-bkp/src/hooks/useSLAData.ts)",
+      "Bash(grep -r \"activity_date\\\\|activity_at\" /d/crm-bkp/src --include=*.ts --include=*.tsx)"
     ]
   }
 }

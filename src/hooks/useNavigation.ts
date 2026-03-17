@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type AppTab = 'dashboard' | 'team' | 'me' | 'clients' | 'sla' | 'pipeline' | 'profile' | 'tasks' | 'settings';
+export type AppTab = 'dashboard' | 'team' | 'me' | 'clients' | 'sla' | 'pipeline' | 'profile' | 'tasks' | 'settings' | 'zalo';
 
 interface NavigationState {
   activeTab: AppTab;

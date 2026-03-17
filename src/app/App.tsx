@@ -12,6 +12,7 @@ import TaskList from '../pages/tasks/TaskList';
 import Settings from '../pages/settings/Settings';
 import { ProfileView } from './components/ProfileView';
 import { LoadingScreen } from './components/LoadingScreen';
+import ZaloManager from '../pages/zalo/ZaloManager';
 
 import { useNavigationStore, AppTab } from '../hooks/useNavigation';
 
@@ -67,6 +68,8 @@ export default function App() {
         return <TaskList />;
       case 'settings':
         return <Settings />;
+      case 'zalo':
+        return <ZaloManager />;
       default:
         return <Dashboard />;
     }

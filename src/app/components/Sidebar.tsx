@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   GitBranch,
   CheckSquare,
+  MessageSquare,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -56,6 +57,7 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
       title: 'Vận hành',
       items: [
         { id: 'tasks',     icon: CheckSquare,    label: 'Nhiệm vụ' },
+        { id: 'zalo',      icon: MessageSquare,  label: 'Zalo Manager' },
         { id: 'sla',       icon: AlertTriangle,  label: 'SLA Monitor' },
       ],
     },
