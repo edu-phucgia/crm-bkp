@@ -9,7 +9,7 @@ import { Button } from '../../app/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../app/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../app/components/ui/tabs';
 import { Badge } from '../../app/components/ui/badge';
-import { Skeleton } from '../../app/components/ui/skeleton';
+import { ComponentLoading } from '../../app/components/ComponentLoading';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../app/components/ui/table';
 import { Textarea } from '../../app/components/ui/textarea';
 import { format, parseISO } from 'date-fns';
@@ -25,7 +25,7 @@ const formatVND = (n: number) =>
 
 // ── Badge tier khớp đúng enum DB: standard/silver/gold/vip ──
 const TIER_STYLE: Record<string, string> = {
-  vip: 'bg-blue-600 text-white',
+  vip: 'bg-[#6C3BAA] text-white hover:bg-[#6C3BAA]/90',
   gold: 'bg-amber-500 text-white',
   silver: 'bg-slate-400 text-white',
   standard: 'bg-slate-100 text-slate-600',
@@ -76,7 +76,7 @@ export default function CustomerDetail({ id, onBack }: CustomerDetailProps) {
     if (reason !== null) updateStatus({ status: 'blacklist', reason });
   };
 
-  if (isLoading) return <div className="p-8"><Skeleton className="h-[600px] w-full" /></div>;
+  if (isLoading) return <ComponentLoading />;
   if (isError) return <div className="p-8 text-center text-red-500">Lỗi: {(error as Error).message}</div>;
   if (!customer) return <div className="p-8 text-center text-slate-400">Không tìm thấy khách hàng</div>;
 

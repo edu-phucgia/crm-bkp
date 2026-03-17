@@ -19,9 +19,9 @@ export interface AuthContextType {
 }
 
 const MOCK_USER: User = {
-  id: 'u1',
+  id: '22222222-2222-2222-2222-222222222222',
   name: 'Lê Mạnh Tiến',
-  email: 'tienlm@phucgia.vn',
+  email: 'tien@pgl.vn',
   availableRoles: ['admin', 'sales_manager', 'sales_rep'], // This user has all 3 roles
   avatar: 'LM',
 };

@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useDashboardStats } from '../../hooks/useDashboardStats';
 import { useTasks } from '../../hooks/useTasks';
 import { usePipelineDeals } from '../../hooks/usePipelineDeals';
+import { ComponentLoading } from './ComponentLoading';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const TODAY = new Date();
@@ -123,7 +124,7 @@ export function PersonalDashboard() {
   const { tasks, updateStatus } = useTasks();
 
   if (isLoadingStats || isLoadingDeals) {
-    return <div className="p-6">Đang tải dữ liệu...</div>;
+    return <ComponentLoading message="Đang cá nhân hóa dữ liệu của bạn..." size="lg" />;
   }
 
   // Task processing
@@ -135,10 +136,9 @@ export function PersonalDashboard() {
     updateStatus({ taskId: id, status: currentStatus === 'done' ? 'todo' : 'done' });
   };
 
-  // Performance Data
-  // We try to match by name since mock user id won't match Supabase uuid
-  const myPerformance = statsData?.employeePerformance.find(p => p.name.includes('Tiến')) 
-                        || statsData?.employeePerformance[0]; 
+  // Performance Data — match by email (AuthContext.email matches users.email in Supabase)
+  const myPerformance = statsData?.employeePerformance.find(p => p.email === user?.email)
+                        ?? statsData?.employeePerformance[0];
   
   const target = myPerformance?.targetMonthly || 200000000;
   const actual = myPerformance?.actualRevenue || 0;

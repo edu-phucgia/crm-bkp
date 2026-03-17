@@ -24,11 +24,12 @@ import {
 import { useTasks, Task } from '../../hooks/useTasks';
 import { Card, CardContent } from '../../app/components/ui/card';
 import { Badge } from '../../app/components/ui/badge';
-import { Skeleton } from '../../app/components/ui/skeleton';
+import { ComponentLoading } from '../../app/components/ComponentLoading';
 import { Button } from '../../app/components/ui/button';
 import { Input } from '../../app/components/ui/input';
 import { format, parseISO, isPast } from 'date-fns';
 import { toast } from 'sonner';
+import { AddTaskDialog } from './AddTaskDialog';
 
 const COLUMNS = [
   { id: 'todo', label: 'Cần làm', color: '#64748b' },
@@ -124,6 +125,7 @@ function TaskCard({ task, isOverlay }: { task: Task, isOverlay?: boolean }) {
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 
 export default function TaskList() {
+  const [isAddOpen, setIsAddOpen] = useState(false);
   const { tasks, isLoading, updateStatus } = useTasks();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
@@ -166,7 +168,7 @@ export default function TaskList() {
 
   const activeTask = activeId ? tasks.find(t => t.id === activeId) : null;
 
-  if (isLoading) return <div className="p-8"><Skeleton className="h-[600px] w-full" /></div>;
+  if (isLoading) return <ComponentLoading />;
 
   return (
     <div className="p-6 bg-slate-50 min-h-screen flex flex-col gap-6">
@@ -185,7 +187,9 @@ export default function TaskList() {
               onChange={e => setSearch(e.target.value)}
             />
           </div>
-          <Button className="font-bold"><Plus size={18} className="mr-2" /> Thêm việc</Button>
+          <Button className="font-bold" onClick={() => setIsAddOpen(true)}>
+            <Plus size={18} className="mr-2" /> Thêm việc
+          </Button>
         </div>
       </div>
 
@@ -212,6 +216,7 @@ export default function TaskList() {
           </DndContext>
         </div>
       </div>
+      <AddTaskDialog open={isAddOpen} onOpenChange={setIsAddOpen} />
     </div>
   );
 }

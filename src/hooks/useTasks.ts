@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
+import { toast } from 'sonner';
 
 export interface Task {
   id: string;
@@ -57,6 +58,10 @@ export function useTasks() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      toast.success('Cập nhật trạng thái nhiệm vụ thành công');
+    },
+    onError: (error) => {
+      toast.error(`Lỗi cập nhật trạng thái nhiệm vụ: ${error.message}`);
     }
   });
 
@@ -67,6 +72,10 @@ export function useTasks() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      toast.success('Thêm nhiệm vụ thành công');
+    },
+    onError: (error) => {
+      toast.error(`Lỗi thêm nhiệm vụ: ${error.message}`);
     }
   });
 
@@ -75,6 +84,7 @@ export function useTasks() {
     isLoading: tasksQuery.isLoading,
     updateStatus: updateTaskStatusMutation.mutate,
     createTask: createTaskMutation.mutate,
-    isUpdating: updateTaskStatusMutation.isPending
+    isUpdating: updateTaskStatusMutation.isPending,
+    isCreating: createTaskMutation.isPending
   };
 }

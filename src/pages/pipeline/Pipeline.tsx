@@ -1,16 +1,16 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   DndContext,
   DragOverlay,
-  closestCorners,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
   DragStartEvent,
   DragEndEvent,
-  defaultDropAnimationSideEffects,
   useDroppable,
+  pointerWithin,
+  rectIntersection,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -19,18 +19,21 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { 
-  Search, TrendingUp, Calendar, 
-  Plus, Edit2
+import {
+  Search, TrendingUp, Calendar,
+  Plus, Edit2, Trash2, GripVertical, AlertCircle
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { usePipelineDeals, Deal } from '../../hooks/usePipelineDeals';
 import { Card, CardContent } from '../../app/components/ui/card';
 import { Badge } from '../../app/components/ui/badge';
-import { Skeleton } from '../../app/components/ui/skeleton';
+import { ComponentLoading } from '../../app/components/ComponentLoading';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../app/components/ui/select';
 import { Input } from '../../app/components/ui/input';
+import { Button } from '../../app/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../app/components/ui/dialog';
 import { differenceInDays, parseISO, format } from 'date-fns';
+import { AddDealDialog } from './AddDealDialog';
+import { EditDealDialog } from './EditDealDialog';
 
 // ─── STAGES ───────────────────────────────────────────────────────────────────
 
@@ -66,6 +69,12 @@ const PRODUCT_LABELS: Record<string, string> = {
 
 const formatVND = (n: number) => n.toLocaleString('vi-VN') + ' ₫';
 
+function getDaysInfo(expectedCloseDate: string | null) {
+  if (!expectedCloseDate) return null;
+  const days = differenceInDays(parseISO(expectedCloseDate), new Date());
+  return days;
+}
+
 // ─── COMPONENTS ───────────────────────────────────────────────────────────────
 
 interface ColumnProps {
@@ -73,19 +82,22 @@ interface ColumnProps {
   label: string;
   color: string;
   deals: Deal[];
+  onAddDeal: (stage: string) => void;
+  onEditDeal: (deal: Deal) => void;
+  onDeleteDeal: (deal: Deal) => void;
 }
 
-function KanbanColumn({ id, label, color, deals }: ColumnProps) {
+function KanbanColumn({ id, label, color, deals, onAddDeal, onEditDeal, onDeleteDeal }: ColumnProps) {
   const { setNodeRef } = useDroppable({ id });
   const totalValue = deals.reduce((sum, d) => sum + Number(d.value), 0);
 
   return (
-    <div 
+    <div
       ref={setNodeRef}
       className="flex flex-col w-[280px] shrink-0 bg-slate-100 rounded-xl border border-slate-200"
     >
-      <div 
-        className="px-4 py-3 rounded-t-xl border-b-2" 
+      <div
+        className="px-4 py-3 rounded-t-xl border-b-2"
         style={{ borderColor: color, backgroundColor: '#fff' }}
       >
         <div className="flex items-center justify-between mb-1">
@@ -95,7 +107,12 @@ function KanbanColumn({ id, label, color, deals }: ColumnProps) {
               {deals.length}
             </Badge>
           </div>
-          <button className="text-slate-400 hover:text-slate-600">
+          <button
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => onAddDeal(id)}
+            className="text-slate-400 hover:text-primary hover:bg-blue-50 rounded p-0.5 transition-colors"
+            title="Thêm deal vào cột này"
+          >
             <Plus size={14} />
           </button>
         </div>
@@ -107,7 +124,12 @@ function KanbanColumn({ id, label, color, deals }: ColumnProps) {
       <div className="flex-1 p-2 space-y-2 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
         <SortableContext items={deals.map(d => d.id)} strategy={verticalListSortingStrategy}>
           {deals.map(deal => (
-            <SortableDealCard key={deal.id} deal={deal} />
+            <SortableDealCard
+              key={deal.id}
+              deal={deal}
+              onEdit={onEditDeal}
+              onDelete={onDeleteDeal}
+            />
           ))}
         </SortableContext>
         {deals.length === 0 && (
@@ -120,7 +142,13 @@ function KanbanColumn({ id, label, color, deals }: ColumnProps) {
   );
 }
 
-function SortableDealCard({ deal }: { deal: Deal }) {
+interface SortableCardProps {
+  deal: Deal;
+  onEdit: (deal: Deal) => void;
+  onDelete: (deal: Deal) => void;
+}
+
+function SortableDealCard({ deal, onEdit, onDelete }: SortableCardProps) {
   const {
     attributes,
     listeners,
@@ -132,59 +160,120 @@ function SortableDealCard({ deal }: { deal: Deal }) {
 
   const style = {
     transform: CSS.Translate.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
+    // Tắt transition khi đang drag để không bị khựng
+    transition: isDragging ? 'none' : transition,
+    // Ẩn hoàn toàn source card — DragOverlay là bản hiển thị duy nhất
+    opacity: isDragging ? 0 : 1,
+    pointerEvents: isDragging ? 'none' as const : undefined,
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <DealCard deal={deal} />
+    // Gắn listeners lên toàn bộ wrapper → drag được ở bất kỳ vị trí nào trên card
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="cursor-grab active:cursor-grabbing"
+    >
+      <DealCard
+        deal={deal}
+        onEdit={onEdit}
+        onDelete={onDelete}
+      />
     </div>
   );
 }
 
-function DealCard({ deal, isOverlay }: { deal: Deal, isOverlay?: boolean }) {
-  const urgent = deal.expected_close_date ? differenceInDays(parseISO(deal.expected_close_date), new Date()) < 7 : false;
+interface DealCardProps {
+  deal: Deal;
+  onEdit?: (deal: Deal) => void;
+  onDelete?: (deal: Deal) => void;
+  isOverlay?: boolean;
+}
+
+function DealCard({ deal, onEdit, onDelete, isOverlay }: DealCardProps) {
+  const daysLeft = getDaysInfo(deal.expected_close_date);
+  const isOverdue = daysLeft !== null && daysLeft < 0;
+  const isUrgent = daysLeft !== null && daysLeft >= 0 && daysLeft < 7;
+  const isWarning = daysLeft !== null && daysLeft >= 7 && daysLeft < 30;
   const productStyle = PRODUCT_COLORS[deal.product_type] || PRODUCT_COLORS['khac'];
 
+  const borderColor = isOverdue || isUrgent ? '#ef4444' : isWarning ? '#f59e0b' : 'transparent';
+
+  const dateLabel = () => {
+    if (!deal.expected_close_date) return <span className="text-slate-400">Chưa có ngày</span>;
+    if (isOverdue) return <span className="text-red-500 font-bold">Quá hạn {Math.abs(daysLeft!)} ngày</span>;
+    if (isUrgent) return <span className="text-red-500 font-bold">Còn {daysLeft} ngày</span>;
+    if (isWarning) return <span className="text-amber-500 font-semibold">Còn {daysLeft} ngày</span>;
+    return <span className="text-slate-400">{format(parseISO(deal.expected_close_date), 'dd/MM/yyyy')}</span>;
+  };
+
   return (
-    <Card 
-      className={`group relative hover:shadow-md transition-shadow cursor-grab active:cursor-grabbing border-l-4 ${isOverlay ? 'shadow-xl' : ''}`}
-      style={{ borderLeftColor: urgent ? '#ef4444' : 'transparent' }}
+    <Card
+      className={`group relative transition-shadow border-l-4 ${isOverlay ? 'shadow-xl rotate-1' : 'hover:shadow-md'}`}
+      style={{ borderLeftColor: borderColor }}
     >
-      <CardContent className="p-3 space-y-2">
-        <div className="flex justify-between items-start gap-2">
-          <p className="text-[11px] font-bold text-slate-900 line-clamp-1">{deal.customer?.company_name}</p>
-          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button className="p-1 hover:bg-slate-100 rounded text-slate-400"><Edit2 size={10} /></button>
-          </div>
-        </div>
-
-        <h4 className="text-[10px] text-slate-500 font-medium line-clamp-2 leading-tight">
-          {deal.title}
-        </h4>
-
-        <div className="flex items-center justify-between">
-          <p className="text-xs font-bold text-primary">{formatVND(deal.value)}</p>
-          <Badge 
-            variant="outline" 
-            className="text-[9px] px-1.5 py-0 border leading-none h-4"
-            style={{ backgroundColor: productStyle.bg, color: productStyle.text, borderColor: productStyle.border }}
-          >
-            {PRODUCT_LABELS[deal.product_type] || 'Khác'}
-          </Badge>
-        </div>
-
-        <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-[8px] font-bold text-primary">
-              {deal.owner?.full_name?.charAt(0)}
+      <CardContent className="p-0">
+        {/* Drag handle — visual only, drag is handled by wrapper */}
+        <div className="flex items-center gap-2 px-3 pt-3 pb-1">
+          <GripVertical size={12} className="text-slate-300 shrink-0" />
+          <p className="text-[11px] font-bold text-slate-900 line-clamp-1 flex-1">
+            {deal.customer?.company_name}
+          </p>
+          {/* Action buttons — stop pointer propagation so they don't trigger drag */}
+          {!isOverlay && (
+            <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => onEdit?.(deal)}
+                className="p-1 hover:bg-blue-50 hover:text-blue-600 rounded text-slate-400 transition-colors cursor-pointer"
+                title="Chỉnh sửa"
+              >
+                <Edit2 size={11} />
+              </button>
+              <button
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => onDelete?.(deal)}
+                className="p-1 hover:bg-red-50 hover:text-red-600 rounded text-slate-400 transition-colors cursor-pointer"
+                title="Xóa deal"
+              >
+                <Trash2 size={11} />
+              </button>
             </div>
-            <span className="text-[9px] font-medium text-slate-500">{deal.owner?.full_name}</span>
+          )}
+        </div>
+
+        <div className="px-3 pb-3 space-y-2">
+          <h4 className="text-[10px] text-slate-500 font-medium line-clamp-2 leading-tight">
+            {deal.title}
+          </h4>
+
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold text-primary">{formatVND(Number(deal.value))}</p>
+            <Badge
+              variant="outline"
+              className="text-[9px] px-1.5 py-0 border leading-none h-4"
+              style={{ backgroundColor: productStyle.bg, color: productStyle.text, borderColor: productStyle.border }}
+            >
+              {PRODUCT_LABELS[deal.product_type] || 'Khác'}
+            </Badge>
           </div>
-          <div className={`flex items-center gap-1 text-[9px] ${urgent ? 'text-red-500 font-bold' : 'text-slate-400'}`}>
-            <Calendar size={10} />
-            {deal.expected_close_date ? format(parseISO(deal.expected_close_date), 'dd/MM') : 'N/A'}
+
+          <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-[8px] font-bold text-primary shrink-0">
+                {deal.owner?.full_name?.charAt(0) || '?'}
+              </div>
+              <span className="text-[9px] font-medium text-slate-500 line-clamp-1">
+                {deal.owner?.full_name || 'Chưa phân công'}
+              </span>
+            </div>
+            <div className="flex items-center gap-1 text-[9px]">
+              {(isOverdue || isUrgent) && <AlertCircle size={9} className="text-red-500" />}
+              <Calendar size={9} className={isOverdue || isUrgent ? 'text-red-500' : isWarning ? 'text-amber-500' : 'text-slate-400'} />
+              {dateLabel()}
+            </div>
           </div>
         </div>
       </CardContent>
@@ -192,12 +281,66 @@ function DealCard({ deal, isOverlay }: { deal: Deal, isOverlay?: boolean }) {
   );
 }
 
+// ─── DELETE CONFIRMATION DIALOG ────────────────────────────────────────────────
+
+function DeleteConfirmDialog({
+  deal,
+  open,
+  onOpenChange,
+  onConfirm,
+  isDeleting
+}: {
+  deal: Deal | null;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onConfirm: () => void;
+  isDeleting: boolean;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[400px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-red-600">
+            <Trash2 size={18} />
+            Xóa Deal
+          </DialogTitle>
+        </DialogHeader>
+        <div className="py-2 text-sm text-slate-600">
+          Bạn có chắc chắn muốn xóa deal{' '}
+          <span className="font-bold text-slate-900">"{deal?.title}"</span> của khách hàng{' '}
+          <span className="font-bold text-slate-900">{deal?.customer?.company_name}</span>?
+          <p className="mt-2 text-xs text-slate-400">Deal sẽ được chuyển vào trạng thái "Đã mất" và ẩn khỏi pipeline.</p>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isDeleting}>
+            Hủy
+          </Button>
+          <Button variant="destructive" onClick={onConfirm} disabled={isDeleting}>
+            {isDeleting ? 'Đang xóa...' : 'Xóa deal'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 
 export default function Pipeline() {
   const [filters, setFilters] = useState<any>({ ownerId: 'all', productType: 'all', search: '' });
-  const { deals, isLoading, users, updateStage } = usePipelineDeals(filters);
+  const { deals, isLoading, isError, users, updateStage, deleteDeal, isDeleting } = usePipelineDeals(filters);
+
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [addStage, setAddStage] = useState<string>('lead');
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
+  const [deletingDeal, setDeletingDeal] = useState<Deal | null>(null);
+
+  const collisionDetection = useCallback((args: Parameters<typeof pointerWithin>[0]) => {
+    const pointerCollisions = pointerWithin(args);
+    if (pointerCollisions.length > 0) return pointerCollisions;
+    return rectIntersection(args);
+  }, []);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -211,24 +354,17 @@ export default function Pipeline() {
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
-
     if (!over) return;
 
     const activeDeal = deals.find(d => d.id === active.id);
     if (!activeDeal) return;
 
-    // Determine the new stage
-    // dnd-kit gives us the id of the 'over' element. 
-    // In our case, the over element could be a Column (if we make columns droppable) or another Card.
-    // To simplify, let's look at what's under the cursor.
     const overId = over.id.toString();
     let newStage = '';
 
-    // Check if overId is a stage id
     if (STAGES.some(s => s.id === overId)) {
       newStage = overId;
     } else {
-      // It's a deal id, get its stage
       const overDeal = deals.find(d => d.id === overId);
       if (overDeal) newStage = overDeal.stage;
     }
@@ -243,10 +379,40 @@ export default function Pipeline() {
     }
   };
 
+  const handleAddDeal = (stage: string) => {
+    setAddStage(stage);
+    setIsAddOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!deletingDeal) return;
+    deleteDeal(deletingDeal.id, {
+      onSuccess: () => setDeletingDeal(null)
+    });
+  };
+
   const totalValue = deals.reduce((sum, d) => sum + Number(d.value), 0);
   const activeDeal = activeId ? deals.find(d => d.id === activeId) : null;
 
-  if (isLoading) return <div className="p-8"><Skeleton className="h-[600px] w-full" /></div>;
+  if (isLoading) return <ComponentLoading />;
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full bg-slate-50 p-10 text-center">
+        <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
+          <AlertCircle size={32} />
+        </div>
+        <h2 className="text-xl font-bold text-slate-900 mb-2">Đã có lỗi xảy ra</h2>
+        <p className="text-slate-500 mb-6 max-w-md">Không thể tải dữ liệu Pipeline. Vui lòng kiểm tra lại kết nối hoặc liên hệ kỹ thuật.</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-6 py-2 bg-primary text-white rounded-lg font-bold shadow-md hover:bg-blue-700 transition-all"
+        >
+          Tải lại trang
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-screen bg-slate-50 pt-6">
@@ -261,9 +427,9 @@ export default function Pipeline() {
             <span className="font-bold">{formatVND(totalValue)}</span>
             <span className="text-xs opacity-70">tổng pipeline</span>
           </div>
-          <button 
-            className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 group hover:shadow-lg transition-all"
-            onClick={() => toast.info('Chức năng thêm deal đang được phát triển')}
+          <button
+            className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:shadow-lg transition-all"
+            onClick={() => handleAddDeal('lead')}
           >
             <Plus size={16} />
             Thêm deal
@@ -275,14 +441,14 @@ export default function Pipeline() {
       <div className="px-6 pb-4 flex items-center gap-3 shrink-0">
         <div className="relative w-[280px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-          <Input 
-            placeholder="Tìm deal, khách hàng..." 
+          <Input
+            placeholder="Tìm deal, khách hàng..."
             className="pl-10 bg-white border-slate-200"
             value={filters.search}
-            onChange={e => setFilters({...filters, search: e.target.value})}
+            onChange={e => setFilters({ ...filters, search: e.target.value })}
           />
         </div>
-        <Select value={filters.ownerId} onValueChange={val => setFilters({...filters, ownerId: val})}>
+        <Select value={filters.ownerId} onValueChange={val => setFilters({ ...filters, ownerId: val })}>
           <SelectTrigger className="w-[180px] bg-white border-slate-200">
             <SelectValue placeholder="Nhân viên" />
           </SelectTrigger>
@@ -293,7 +459,7 @@ export default function Pipeline() {
             ))}
           </SelectContent>
         </Select>
-        <Select value={filters.productType} onValueChange={val => setFilters({...filters, productType: val})}>
+        <Select value={filters.productType} onValueChange={val => setFilters({ ...filters, productType: val })}>
           <SelectTrigger className="w-[150px] bg-white border-slate-200">
             <SelectValue placeholder="Loại sản phẩm" />
           </SelectTrigger>
@@ -312,33 +478,48 @@ export default function Pipeline() {
         <div className="flex gap-4 h-full min-w-max">
           <DndContext
             sensors={sensors}
-            collisionDetection={closestCorners}
+            collisionDetection={collisionDetection}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
             {STAGES.map(stage => (
-              <KanbanColumn 
+              <KanbanColumn
                 key={stage.id}
                 id={stage.id}
                 label={stage.label}
                 color={stage.color}
                 deals={deals.filter(d => d.stage === stage.id)}
+                onAddDeal={handleAddDeal}
+                onEditDeal={setEditingDeal}
+                onDeleteDeal={setDeletingDeal}
               />
             ))}
-            <DragOverlay dropAnimation={{
-              sideEffects: defaultDropAnimationSideEffects({
-                styles: {
-                  active: {
-                    opacity: '0.4',
-                  },
-                },
-              }),
-            }}>
+            <DragOverlay dropAnimation={null}>
               {activeDeal ? <DealCard deal={activeDeal} isOverlay /> : null}
             </DragOverlay>
           </DndContext>
         </div>
       </div>
+
+      <AddDealDialog
+        open={isAddOpen}
+        onOpenChange={setIsAddOpen}
+        defaultStage={addStage}
+      />
+
+      <EditDealDialog
+        deal={editingDeal}
+        open={!!editingDeal}
+        onOpenChange={(open) => { if (!open) setEditingDeal(null); }}
+      />
+
+      <DeleteConfirmDialog
+        deal={deletingDeal}
+        open={!!deletingDeal}
+        onOpenChange={(open) => { if (!open) setDeletingDeal(null); }}
+        onConfirm={handleConfirmDelete}
+        isDeleting={isDeleting}
+      />
     </div>
   );
 }

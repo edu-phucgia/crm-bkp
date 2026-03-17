@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import { startOfToday, subDays, differenceInMinutes, parseISO } from 'date-fns';
 import { useEffect } from 'react';
+import { toast } from 'sonner';
 
 export interface SLAActivity {
   id: string;
@@ -135,11 +136,20 @@ export function useSLAData() {
       if (error) throw error;
       return { minutes, isViolation };
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       // Invalidate all SLA queries to refresh UI
       queryClient.invalidateQueries({ queryKey: ['sla-unresponded'] });
       queryClient.invalidateQueries({ queryKey: ['sla-stats'] });
       queryClient.invalidateQueries({ queryKey: ['sla-history'] });
+      
+      if (data.isViolation) {
+        toast.warning(`SLA Violated: Response time ${data.minutes}m`);
+      } else {
+        toast.success(`SLA Passed: Response time ${data.minutes}m`);
+      }
+    },
+    onError: (error) => {
+      toast.error(`Error processing SLA message: ${error.message}`);
     }
   });
 

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
+import { toast } from 'sonner';
 
 // ============================================================
 //  Interface khớp đúng với schema Supabase đã tạo
@@ -110,10 +111,96 @@ export function useCustomers(
     retry: 1,
   });
 
+  const queryClient = useQueryClient();
+
+  const addCustomerMutation = useMutation({
+    mutationFn: async (customer: Partial<Customer>) => {
+      const { data, error } = await supabase
+        .from('customers')
+        .insert({
+          company_name: customer.company_name,
+          short_name: customer.short_name,
+          industry: customer.industry,
+          source: customer.source,
+          tier: customer.tier || 'standard',
+          status: customer.status || 'active',
+          assigned_to: customer.assigned_to,
+          notes: customer.notes
+        })
+        .select()
+        .single();
+        
+      if (error) throw new Error(error.message);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      toast.success('Thêm khách hàng thành công');
+    },
+    onError: (error) => {
+      toast.error(`Lỗi thêm khách hàng: ${error.message}`);
+    }
+  });
+
+  const updateCustomerMutation = useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<Customer> & { id: string }) => {
+      const { data, error } = await supabase
+        .from('customers')
+        .update({
+          company_name: updates.company_name,
+          short_name: updates.short_name,
+          industry: updates.industry,
+          source: updates.source,
+          tier: updates.tier,
+          status: updates.status,
+          assigned_to: updates.assigned_to,
+          notes: updates.notes
+        })
+        .eq('id', id)
+        .select()
+        .single();
+        
+      if (error) throw new Error(error.message);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['customer'] });
+      toast.success('Cập nhật khách hàng thành công');
+    },
+    onError: (error) => {
+      toast.error(`Lỗi cập nhật: ${error.message}`);
+    }
+  });
+
+  const deleteCustomerMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('customers')
+        .delete()
+        .eq('id', id);
+        
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      toast.success('Xóa khách hàng thành công');
+    },
+    onError: (error) => {
+      toast.error(`Lỗi xóa: ${error.message}`);
+    }
+  });
+
   return {
     ...listQuery,
     customers: listQuery.data?.data || [],
     totalCount: listQuery.data?.count || 0,
+    addCustomer: addCustomerMutation.mutate,
+    updateCustomer: updateCustomerMutation.mutate,
+    deleteCustomer: deleteCustomerMutation.mutate,
+    isAdding: addCustomerMutation.isPending,
+    isUpdating: updateCustomerMutation.isPending,
+    isDeleting: deleteCustomerMutation.isPending,
   };
 }
 
@@ -250,9 +337,14 @@ export function useCustomerDetail(id: string) {
       if (error) throw new Error(error.message);
     },
     onSuccess: () => {
+      // Cập nhật lại danh sách hoạt động và chi tiết KH
       queryClient.invalidateQueries({ queryKey: ['customer-activities', id] });
       queryClient.invalidateQueries({ queryKey: ['customer', id] });
+      toast.success('Thêm hoạt động thành công');
     },
+    onError: (error) => {
+      toast.error(`Lỗi thêm hoạt động: ${error.message}`);
+    }
   });
 
   // Cập nhật trạng thái KH
@@ -269,7 +361,11 @@ export function useCustomerDetail(id: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customer', id] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
+      toast.success('Cập nhật trạng thái thành công');
     },
+    onError: (error) => {
+      toast.error(`Lỗi cập nhật trạng thái: ${error.message}`);
+    }
   });
 
   return {

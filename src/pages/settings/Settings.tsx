@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../..
 import { Button } from '../../app/components/ui/button';
 import { Input } from '../../app/components/ui/input';
 import { Badge } from '../../app/components/ui/badge';
-import { Skeleton } from '../../app/components/ui/skeleton';
+import { ComponentLoading } from '../../app/components/ComponentLoading';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../app/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../app/components/ui/tabs';
 import { toast } from 'sonner';
@@ -56,7 +56,7 @@ export default function Settings() {
     );
   }
 
-  if (isLoading) return <div className="p-8"><Skeleton className="h-[600px] w-full" /></div>;
+  if (isLoading) return <ComponentLoading variant="minimal" message="Đang tải cấu hình..." />;
 
   return (
     <div className="p-6 space-y-6 bg-slate-50 min-h-screen">

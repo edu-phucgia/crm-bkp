@@ -19,3 +19,5 @@ console.log('[Supabase] Khởi tạo client:', {
 });
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
+
+export { supabaseUrl, supabaseKey };

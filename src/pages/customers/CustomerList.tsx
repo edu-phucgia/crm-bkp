@@ -2,9 +2,9 @@ import { useState, ReactNode } from 'react';
 import {
   Building2, Search,
   ChevronLeft, ChevronRight,
-  MoreVertical, Plus,
+  Plus, Edit2, Trash2
 } from 'lucide-react';
-import { useCustomers, useUsersList } from '../../hooks/useCustomers';
+import { useCustomers, useUsersList, Customer } from '../../hooks/useCustomers';
 import { Card, CardContent } from '../../app/components/ui/card';
 import { Input } from '../../app/components/ui/input';
 import { Button } from '../../app/components/ui/button';
@@ -13,17 +13,27 @@ import {
   Select, SelectContent, SelectItem,
   SelectTrigger, SelectValue
 } from '../../app/components/ui/select';
-import { Skeleton } from '../../app/components/ui/skeleton';
+import { ComponentLoading } from '../../app/components/ComponentLoading';
 import {
   Table, TableBody, TableCell,
   TableHead, TableHeader, TableRow
 } from '../../app/components/ui/table';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+  DialogDescription, DialogFooter
+} from '../../app/components/ui/dialog';
+import { AddCustomerDialog } from './AddCustomerDialog';
+import { EditCustomerDialog } from './EditCustomerDialog';
 
 interface CustomerListProps {
   onCustomerSelect: (id: string) => void;
 }
 
 export default function CustomerList({ onCustomerSelect }: CustomerListProps) {
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [deleteCustomerId, setDeleteCustomerId] = useState<string | null>(null);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState({
     status: 'all',
@@ -32,8 +42,20 @@ export default function CustomerList({ onCustomerSelect }: CustomerListProps) {
     search: '',
   });
 
-  const { customers, totalCount, isLoading, isError, error } = useCustomers(filters, page);
+  const { customers, totalCount, isLoading, isError, error, deleteCustomer } = useCustomers(filters, page);
   const { data: users } = useUsersList();
+
+  const handleEdit = (c: Customer) => {
+    setEditingCustomer(c);
+    setIsEditOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (deleteCustomerId) {
+      deleteCustomer(deleteCustomerId);
+      setDeleteCustomerId(null);
+    }
+  };
 
   // ── Badge helpers ──────────────────────────────────────────
   const getStatusBadge = (status: string) => {
@@ -48,7 +70,7 @@ export default function CustomerList({ onCustomerSelect }: CustomerListProps) {
   // Enum DB: standard / silver / gold / vip
   const getTierBadge = (tier: string) => {
     const map: Record<string, ReactNode> = {
-      vip: <Badge className="bg-blue-600 text-white">VIP</Badge>,
+      vip: <Badge className="bg-[#6C3BAA] text-white hover:bg-[#6C3BAA]/90">VIP</Badge>,
       gold: <Badge className="bg-amber-500 text-white">Gold</Badge>,
       silver: <Badge className="bg-slate-400 text-white">Silver</Badge>,
       standard: <Badge variant="outline">Standard</Badge>,
@@ -89,7 +111,7 @@ export default function CustomerList({ onCustomerSelect }: CustomerListProps) {
             {isLoading ? 'Đang tải...' : `${totalCount} khách hàng`}
           </p>
         </div>
-        <Button className="font-bold flex items-center gap-2">
+        <Button className="font-bold flex items-center gap-2" onClick={() => setIsAddOpen(true)}>
           <Plus size={18} /> Thêm khách hàng
         </Button>
       </div>
@@ -175,13 +197,11 @@ export default function CustomerList({ onCustomerSelect }: CustomerListProps) {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                [1, 2, 3, 4, 5].map(i => (
-                  <TableRow key={i}>
-                    {[1, 2, 3, 4, 5, 6, 7].map(j => (
-                      <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
-                    ))}
-                  </TableRow>
-                ))
+                <TableRow>
+                  <TableCell colSpan={7} className="py-20 text-center">
+                    <ComponentLoading message="Đang tải danh sách khách hàng..." size="lg" />
+                  </TableCell>
+                </TableRow>
               ) : customers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-16 text-slate-400">
@@ -225,13 +245,22 @@ export default function CustomerList({ onCustomerSelect }: CustomerListProps) {
                       <Badge variant="secondary" className="font-bold">{c.deal_count}</Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost" size="icon"
-                        className="h-8 w-8 text-slate-400 opacity-0 group-hover:opacity-100"
-                        onClick={e => e.stopPropagation()}
-                      >
-                        <MoreVertical size={16} />
-                      </Button>
+                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="ghost" size="icon"
+                          className="h-8 w-8 text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 transition-colors"
+                          onClick={e => { e.stopPropagation(); handleEdit(c); }}
+                        >
+                          <Edit2 size={16} />
+                        </Button>
+                        <Button
+                          variant="ghost" size="icon"
+                          className="h-8 w-8 text-red-600 bg-red-50 hover:bg-red-100 hover:text-red-700 transition-colors"
+                          onClick={e => { e.stopPropagation(); setDeleteCustomerId(c.id); }}
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -265,6 +294,29 @@ export default function CustomerList({ onCustomerSelect }: CustomerListProps) {
           </div>
         </div>
       </Card>
+      
+      <AddCustomerDialog open={isAddOpen} onOpenChange={setIsAddOpen} />
+      <EditCustomerDialog open={isEditOpen} onOpenChange={setIsEditOpen} customer={editingCustomer} />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deleteCustomerId} onOpenChange={(open) => !open && setDeleteCustomerId(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Xác nhận xóa</DialogTitle>
+            <DialogDescription className="py-2">
+              Bạn có chắc chắn muốn xóa khách hàng này không? Hành động này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteCustomerId(null)}>
+              Hủy
+            </Button>
+            <Button variant="destructive" onClick={confirmDelete}>
+              Xóa khách hàng
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

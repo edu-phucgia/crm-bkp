@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
+import { toast } from 'sonner';
 
 export interface User {
   id: string;
@@ -37,6 +38,10 @@ export function useUsersManager() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['manage-users'] });
+      toast.success('Cập nhật người dùng thành công');
+    },
+    onError: (error) => {
+      toast.error(`Lỗi cập nhật người dùng: ${error.message}`);
     }
   });
 
@@ -47,6 +52,10 @@ export function useUsersManager() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['manage-users'] });
+      toast.success('Xóa người dùng thành công');
+    },
+    onError: (error) => {
+      toast.error(`Lỗi xóa người dùng: ${error.message}`);
     }
   });
 

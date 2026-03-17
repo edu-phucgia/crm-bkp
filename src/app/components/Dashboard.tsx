@@ -1,5 +1,6 @@
 import { Users, AlertTriangle, TrendingUp, Handshake, DollarSign, Calendar, Clock, CheckCircle2, Circle } from 'lucide-react';
 import { StatCard } from './StatCard';
+import { ComponentLoading } from './ComponentLoading';
 import { useDashboardStats } from '../../hooks/useDashboardStats';
 import { useTasks } from '../../hooks/useTasks';
 import { useMemo } from 'react';
@@ -23,7 +24,7 @@ export function Dashboard() {
   }, [tasks]);
 
   if (isLoading) {
-    return <div className="p-6">Đang tải Tổng quan...</div>;
+    return <ComponentLoading />;
   }
 
   if (!stats) return null;

@@ -21,6 +21,7 @@ export interface DashboardStats {
   }[];
   employeePerformance: {
     id: string;
+    email: string;
     name: string;
     targetMonthly: number;
     actualRevenue: number;
@@ -88,7 +89,7 @@ export function useDashboardStats() {
         // Active Zalo groups
         supabase.from('zalo_groups').select('*', { count: 'exact', head: true }).eq('status', 'active'),
         // Employee performance
-        supabase.from('users').select('id, full_name, target_monthly'),
+        supabase.from('users').select('id, full_name, email, target_monthly'),
         // SLA violations today
         supabase.from('activities').select('*').eq('is_sla_violation', true).gte('activity_at', todayStart),
         // Expiring contracts
@@ -133,6 +134,7 @@ export function useDashboardStats() {
 
         return {
           id: user.id,
+          email: user.email,
           name: user.full_name,
           targetMonthly: Number(user.target_monthly) || 0,
           actualRevenue: userRevenue,

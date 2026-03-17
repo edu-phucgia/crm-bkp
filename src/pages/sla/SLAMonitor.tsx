@@ -9,7 +9,7 @@ import { useSLAData } from '../../hooks/useSLAData';
 import { Card, CardContent, CardHeader, CardTitle } from '../../app/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../app/components/ui/table';
 import { Badge } from '../../app/components/ui/badge';
-import { Skeleton } from '../../app/components/ui/skeleton';
+import { ComponentLoading } from '../../app/components/ComponentLoading';
 import { Button } from '../../app/components/ui/button';
 import { format, parseISO, differenceInMinutes } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -36,14 +36,7 @@ export default function SLAMonitor() {
   }, []);
 
   if (isLoading) {
-    return (
-      <div className="p-6 space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {[1,2,3,4].map(i => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}
-        </div>
-        <Skeleton className="h-[400px] w-full rounded-xl" />
-      </div>
-    );
+    return <ComponentLoading message="Đang phân tích SLA Realtime..." size="lg" />;
   }
 
   if (isError) {

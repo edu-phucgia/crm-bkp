@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import CustomerList from '../pages/customers/CustomerList';
 import CustomerDetail from '../pages/customers/CustomerDetail';
 import { Sidebar } from './components/Sidebar';
@@ -11,13 +11,25 @@ import Pipeline from '../pages/pipeline/Pipeline';
 import TaskList from '../pages/tasks/TaskList';
 import Settings from '../pages/settings/Settings';
 import { ProfileView } from './components/ProfileView';
+import { LoadingScreen } from './components/LoadingScreen';
+
+import { useNavigationStore, AppTab } from '../hooks/useNavigation';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('me');
+  const [loading, setLoading] = useState(true);
+  const { activeTab, setActiveTab } = useNavigationStore();
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
 
   const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
+    setActiveTab(tab as AppTab);
     setSelectedCustomerId(null); // clear detail when nav changes
   };
 
@@ -59,6 +71,10 @@ export default function App() {
         return <Dashboard />;
     }
   };
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--background)' }}>
