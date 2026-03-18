@@ -1,17 +1,18 @@
-import { useState, useEffect } from 'react';
-import CustomerList from '../pages/customers/CustomerList';
-import CustomerDetail from '../pages/customers/CustomerDetail';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
-import TeamDashboard from '../pages/dashboard/TeamDashboard';
-import { PersonalDashboard } from './components/PersonalDashboard';
-import SLAMonitor from '../pages/sla/SLAMonitor';
-import Pipeline from '../pages/pipeline/Pipeline';
-import TaskList from '../pages/tasks/TaskList';
-import Settings from '../pages/settings/Settings';
-import { ProfileView } from './components/ProfileView';
 import { LoadingScreen } from './components/LoadingScreen';
+
+const CustomerList = lazy(() => import('../pages/customers/CustomerList'));
+const CustomerDetail = lazy(() => import('../pages/customers/CustomerDetail'));
+const TeamDashboard = lazy(() => import('../pages/dashboard/TeamDashboard'));
+const PersonalDashboard = lazy(() => import('./components/PersonalDashboard').then(m => ({ default: m.PersonalDashboard })));
+const SLAMonitor = lazy(() => import('../pages/sla/SLAMonitor'));
+const Pipeline = lazy(() => import('../pages/pipeline/Pipeline'));
+const TaskList = lazy(() => import('../pages/tasks/TaskList'));
+const Settings = lazy(() => import('../pages/settings/Settings'));
+const ProfileView = lazy(() => import('./components/ProfileView').then(m => ({ default: m.ProfileView })));
 
 import { useNavigationStore, AppTab } from '../hooks/useNavigation';
 
@@ -85,7 +86,9 @@ export default function App() {
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header />
         <main className="flex-1 overflow-y-auto">
-          {renderContent()}
+          <Suspense fallback={<LoadingScreen />}>
+            {renderContent()}
+          </Suspense>
         </main>
       </div>
     </div>
