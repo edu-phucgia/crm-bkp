@@ -2,6 +2,20 @@
 @import './tailwind.css';
 @import './theme.css';
 
+/* ── Cursor pointer cho mọi phần tử click được ── */
+button,
+[role="button"],
+label[for],
+select,
+summary,
+a {
+  cursor: pointer;
+}
+input[type="checkbox"],
+input[type="radio"] {
+  cursor: pointer;
+}
+
 /* ── Ẩn scrollbar nhưng vẫn scroll được ── */
 .scrollbar-hide {
   scrollbar-width: none;       /* Firefox */
@@ -11,34 +25,12 @@
   display: none;               /* Chrome/Safari */
 }
 
-/* ── Ẩn scrollbar toàn cục ── */
-html, body {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-html::-webkit-scrollbar,
-body::-webkit-scrollbar {
-  display: none;
-}
 
-/* ── Custom scrollbar cho modal ── */
-.custom-scroll::-webkit-scrollbar {
-  width: 5px;
-}
-.custom-scroll::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 999px;
-}
-.custom-scroll::-webkit-scrollbar-thumb {
-  background: #1A4F9C;
-  border-radius: 999px;
-}
-.custom-scroll::-webkit-scrollbar-thumb:hover {
-  background: #0e3470;
-}
-.custom-scroll {
-  scrollbar-width: thin;
-  scrollbar-color: #1A4F9C #f1f5f9;
+/* ── Tab switching progress bar ── */
+@keyframes tab-progress {
+  0%   { width: 0%;   margin-left: 0; }
+  50%  { width: 70%;  margin-left: 15%; }
+  100% { width: 0%;   margin-left: 100%; }
 }
 
 /* ── Modal animations ── */

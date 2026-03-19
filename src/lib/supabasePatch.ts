@@ -11,24 +11,32 @@
  * PostgREST never needs to guess the schema.
  */
 
-import { supabaseUrl, supabaseKey } from './supabase';
+import { supabase } from './supabase';
 
-const HEADERS = {
-  apikey: supabaseKey,
-  Authorization: `Bearer ${supabaseKey}`,
-  'Content-Type': 'application/json',
-  'Content-Profile': 'public',
-  'Accept-Profile': 'public',
-  Prefer: 'return=minimal',
-};
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+
+async function buildHeaders(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token ?? supabaseAnonKey;
+  return {
+    apikey: supabaseAnonKey,
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+    'Content-Profile': 'public',
+    'Accept-Profile': 'public',
+    Prefer: 'return=minimal',
+  };
+}
 
 /** Fire a PostgREST schema-cache reload via pg_notify (best-effort). */
 async function reloadSchema(): Promise<void> {
   try {
+    const headers = await buildHeaders();
     // pg_notify is reachable via the /rpc/ endpoint when pg_catalog is in search_path
     await fetch(`${supabaseUrl}/rest/v1/rpc/pg_notify`, {
       method: 'POST',
-      headers: HEADERS,
+      headers,
       body: JSON.stringify({ channel: 'pgrst', payload: 'reload schema' }),
     });
     // Give PostgREST ~300 ms to process the reload
@@ -58,12 +66,14 @@ export async function supabasePatch(
 
   const url = `${supabaseUrl}/rest/v1/${table}?${filter}&columns=${encodeURIComponent(columns)}`;
 
-  const doRequest = async () =>
-    fetch(url, {
+  const doRequest = async () => {
+    const headers = await buildHeaders();
+    return fetch(url, {
       method: 'PATCH',
-      headers: HEADERS,
+      headers,
       body: JSON.stringify(payload),
     });
+  };
 
   let res = await doRequest();
 

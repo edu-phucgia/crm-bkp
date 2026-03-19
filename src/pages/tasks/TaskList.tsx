@@ -50,7 +50,7 @@ function KanbanColumn({ id, label, color, tasks }: { id: string, label: string, 
   const { setNodeRef } = useDroppable({ id });
 
   return (
-    <div ref={setNodeRef} className="flex flex-col w-72 shrink-0 bg-slate-100 rounded-xl border border-slate-200 max-h-[calc(100vh-180px)]">
+    <div ref={setNodeRef} className="flex flex-col w-64 md:w-72 shrink-0 bg-slate-100 rounded-xl border border-slate-200 max-h-[calc(100vh-180px)]">
       <div className="p-3 border-b-2 bg-white rounded-t-xl flex items-center justify-between" style={{ borderColor: color }}>
         <div className="flex items-center gap-2">
           <span className="font-bold text-sm text-slate-700">{label}</span>
@@ -180,30 +180,30 @@ export default function TaskList() {
   if (isLoading) return <ComponentLoading />;
 
   return (
-    <div className="p-6 bg-slate-50 min-h-screen flex flex-col gap-6">
-      <div className="flex justify-between items-center shrink-0">
+    <div className="p-3 md:p-6 bg-slate-50 min-h-screen flex flex-col gap-4 md:gap-6">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between shrink-0">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Quản lý Công việc</h1>
           <p className="text-slate-500 text-sm italic">Quản lý hiệu suất làm việc nhóm</p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="relative w-64">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+          <div className="relative w-full md:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <Input 
-              placeholder="Tìm việc, người thực hiện..." 
-              className="pl-9 bg-white" 
+            <Input
+              placeholder="Tìm việc, người thực hiện..."
+              className="pl-9 bg-white"
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
           </div>
-          <Button className="font-bold" onClick={() => setIsAddOpen(true)}>
+          <Button className="font-bold w-full sm:w-auto justify-center" onClick={() => setIsAddOpen(true)}>
             <Plus size={18} className="mr-2" /> Thêm việc
           </Button>
         </div>
       </div>
 
       <div className="flex-1 overflow-x-auto">
-        <div className="flex gap-6 h-full min-w-max pb-4">
+        <div className="flex gap-3 md:gap-6 h-full min-w-max pb-4">
           <DndContext
             sensors={sensors}
             collisionDetection={collisionDetection}

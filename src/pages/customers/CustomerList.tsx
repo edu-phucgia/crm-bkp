@@ -101,25 +101,25 @@ export default function CustomerList({ onCustomerSelect }: CustomerListProps) {
   }
 
   return (
-    <div className="p-6 space-y-6 bg-slate-50 min-h-screen">
+    <div className="p-3 md:p-6 space-y-4 md:space-y-6 bg-slate-50 min-h-screen">
 
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Danh sách khách hàng</h1>
           <p className="text-slate-500 text-sm">
             {isLoading ? 'Đang tải...' : `${totalCount} khách hàng`}
           </p>
         </div>
-        <Button className="font-bold flex items-center gap-2" onClick={() => setIsAddOpen(true)}>
+        <Button className="font-bold flex items-center gap-2 w-full md:w-auto justify-center" onClick={() => setIsAddOpen(true)}>
           <Plus size={18} /> Thêm khách hàng
         </Button>
       </div>
 
       {/* Filters */}
       <Card className="border-none shadow-sm">
-        <CardContent className="p-4 flex flex-wrap gap-3 items-center">
-          <div className="relative w-64">
+        <CardContent className="p-4 flex flex-wrap gap-2 md:gap-3 items-center">
+          <div className="relative w-full md:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <Input
               placeholder="Tìm theo tên công ty..."
@@ -130,7 +130,7 @@ export default function CustomerList({ onCustomerSelect }: CustomerListProps) {
           </div>
 
           <Select value={filters.status} onValueChange={val => setFilters({ ...filters, status: val })}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-full sm:w-40">
               <SelectValue placeholder="Trạng thái" />
             </SelectTrigger>
             <SelectContent>
@@ -143,7 +143,7 @@ export default function CustomerList({ onCustomerSelect }: CustomerListProps) {
 
           {/* Tier filter khớp đúng enum DB */}
           <Select value={filters.tier} onValueChange={val => setFilters({ ...filters, tier: val })}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-full sm:w-40">
               <SelectValue placeholder="Phân hạng" />
             </SelectTrigger>
             <SelectContent>
@@ -157,7 +157,7 @@ export default function CustomerList({ onCustomerSelect }: CustomerListProps) {
 
           {/* Filter nhân viên theo email (assigned_to lưu email) */}
           <Select value={filters.assigned_to} onValueChange={val => setFilters({ ...filters, assigned_to: val })}>
-            <SelectTrigger className="w-48">
+            <SelectTrigger className="w-full sm:w-48">
               <SelectValue placeholder="Người phụ trách" />
             </SelectTrigger>
             <SelectContent>
@@ -187,11 +187,11 @@ export default function CustomerList({ onCustomerSelect }: CustomerListProps) {
             <TableHeader className="bg-slate-50/50">
               <TableRow>
                 <TableHead className="font-bold">Công ty</TableHead>
-                <TableHead className="font-bold">Hạng</TableHead>
+                <TableHead className="font-bold hidden md:table-cell">Hạng</TableHead>
                 <TableHead className="font-bold">Trạng thái</TableHead>
-                <TableHead className="font-bold">Zalo</TableHead>
-                <TableHead className="font-bold">Phụ trách</TableHead>
-                <TableHead className="font-bold">Số Deal</TableHead>
+                <TableHead className="font-bold hidden md:table-cell">Zalo</TableHead>
+                <TableHead className="font-bold hidden md:table-cell">Phụ trách</TableHead>
+                <TableHead className="font-bold hidden sm:table-cell">Số Deal</TableHead>
                 <TableHead className="w-12" />
               </TableRow>
             </TableHeader>
@@ -230,10 +230,10 @@ export default function CustomerList({ onCustomerSelect }: CustomerListProps) {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{getTierBadge(c.tier)}</TableCell>
+                    <TableCell className="hidden md:table-cell">{getTierBadge(c.tier)}</TableCell>
                     <TableCell>{getStatusBadge(c.status)}</TableCell>
-                    <TableCell>{getZaloBadge(c.zalo_status || 'none')}</TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">{getZaloBadge(c.zalo_status || 'none')}</TableCell>
+                    <TableCell className="hidden md:table-cell">
                       <div className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center text-[11px] font-bold text-slate-600 uppercase">
                           {c.sales_name?.charAt(0) ?? '?'}
@@ -241,7 +241,7 @@ export default function CustomerList({ onCustomerSelect }: CustomerListProps) {
                         <span className="text-sm text-slate-600">{c.sales_name}</span>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <Badge variant="secondary" className="font-bold">{c.deal_count}</Badge>
                     </TableCell>
                     <TableCell className="text-right">

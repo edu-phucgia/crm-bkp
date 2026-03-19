@@ -336,7 +336,7 @@ export function usePipelineDeals(filters: PipelineFilters) {
 
   return {
     deals: dealsQuery.data || [],
-    isLoading: dealsQuery.isLoading || usersQuery.isLoading,
+    isLoading: dealsQuery.isLoading,
     isError: dealsQuery.isError,
     error: dealsQuery.error,
     users: usersQuery.data || [],
