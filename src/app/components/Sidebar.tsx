@@ -2,13 +2,13 @@ import {
   LayoutDashboard,
   Settings,
   ChevronLeft,
-  ChevronRight,
   Building2,
   UsersRound,
   UserCircle2,
   AlertTriangle,
   GitBranch,
   CheckSquare,
+  UserCog,
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -33,109 +33,127 @@ interface MenuGroup {
 export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // Chỉ hiển thị các menu có API Supabase hoạt động + dữ liệu thật
-  // Các menu bị ẩn tạm: Zalo Manager, Báo giá, Câu mẫu, Hợp đồng,
-  // Đơn hàng, HSNL, Mẫu thử nghiệm, Báo cáo, Lịch hẹn, Phân tích
   const menuGroups: MenuGroup[] = [
     {
       title: 'Dashboard',
       items: [
-        { id: 'me',        icon: UserCircle2,    label: 'Dashboard của tôi' },
-        { id: 'dashboard', icon: LayoutDashboard, label: 'Tổng quan' },
-        { id: 'team',      icon: UsersRound,      label: 'Dashboard Nhóm' },
+        { id: 'me',        icon: UserCircle2,     label: 'Dashboard của tôi' },
+        { id: 'dashboard', icon: LayoutDashboard,  label: 'Tổng quan' },
+        { id: 'team',      icon: UsersRound,       label: 'Dashboard Nhóm' },
       ],
     },
     {
       title: 'Bán hàng',
       items: [
-        { id: 'clients',   icon: Building2,      label: 'Khách hàng' },
-        { id: 'pipeline',  icon: GitBranch,      label: 'Pipeline' },
+        { id: 'clients',  icon: Building2,  label: 'Khách hàng' },
+        { id: 'pipeline', icon: GitBranch,  label: 'Pipeline' },
       ],
     },
     {
       title: 'Vận hành',
       items: [
-        { id: 'tasks',     icon: CheckSquare,    label: 'Nhiệm vụ' },
-        { id: 'sla',       icon: AlertTriangle,  label: 'SLA Monitor' },
+        { id: 'tasks', icon: CheckSquare,   label: 'Nhiệm vụ' },
+        { id: 'sla',   icon: AlertTriangle, label: 'SLA Monitor' },
       ],
     },
   ];
 
   const bottomItems: MenuItem[] = [
+    { id: 'users',    icon: UserCog,  label: 'Người dùng' },
     { id: 'settings', icon: Settings, label: 'Cài đặt' },
   ];
 
   const { user, activeRole } = useAuth();
-
   if (!user) return null;
 
-  const filteredMenuGroups = menuGroups.map(group => ({
-    ...group,
-    items: group.items.filter(item => {
-      if (item.id === 'team' && activeRole === 'sales_rep') return false;
-      if (item.id === 'sla' && activeRole === 'sales_rep') return false;
-      return true;
-    })
-  })).filter(group => group.items.length > 0);
+  const filteredMenuGroups = menuGroups
+    .map(group => ({
+      ...group,
+      items: group.items.filter(item => {
+        if (item.id === 'team' && activeRole === 'sales_rep') return false;
+        if (item.id === 'sla'  && activeRole === 'sales_rep') return false;
+        return true;
+      }),
+    }))
+    .filter(group => group.items.length > 0);
 
   const filteredBottomItems = bottomItems.filter(item => {
-    if (item.id === 'settings' && activeRole !== 'admin') return false;
+    if ((item.id === 'settings' || item.id === 'users') && activeRole !== 'admin') return false;
     return true;
   });
 
+  const textStyle: React.CSSProperties = {
+    transform: isCollapsed ? 'translateX(-200px)' : 'translateX(0)',
+    transition: 'transform 280ms cubic-bezier(0.4, 0, 0.2, 1)',
+    whiteSpace: 'nowrap',
+    flexShrink: 0,
+    pointerEvents: isCollapsed ? 'none' : 'auto',
+  };
+
   return (
     <div
-      className="h-screen flex flex-col transition-all duration-300 ease-in-out"
+      className="h-screen flex flex-col overflow-hidden shrink-0"
       style={{
         width: isCollapsed ? '60px' : '240px',
+        transition: 'width 280ms cubic-bezier(0.4, 0, 0.2, 1)',
         backgroundColor: 'var(--sidebar)',
         color: 'var(--sidebar-foreground)',
         borderRight: '1px solid var(--sidebar-border)',
       }}
     >
-      {/* Logo and Toggle */}
-      <div className="h-16 flex items-center px-4 border-b shrink-0" style={{ borderColor: 'var(--sidebar-border)' }}>
-        {isCollapsed ? (
+      {/* Logo + Toggle */}
+      <div
+        className="h-16 flex items-center shrink-0 border-b"
+        style={{ borderColor: 'var(--sidebar-border)', padding: '0 14px' }}
+      >
+        <div
+          className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+          style={{ backgroundColor: 'var(--primary)' }}
+          onClick={() => setIsCollapsed(v => !v)}
+        >
+          <span className="text-white font-black text-sm">P</span>
+        </div>
+
+        <div className="ml-2 flex-1 overflow-hidden">
+        <div className="flex items-center justify-between" style={textStyle}>
+          <div>
+            <span className="font-black text-white text-sm block">PGL CRM</span>
+            <p className="text-[9px] text-white/40 font-medium -mt-0.5">v2.0 2026</p>
+          </div>
           <button
-            onClick={() => setIsCollapsed(false)}
-            className="w-10 h-10 mx-auto rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors text-white"
+            onClick={() => setIsCollapsed(v => !v)}
+            className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors text-white/70 hover:text-white ml-8"
           >
-            <ChevronRight size={20} strokeWidth={2} />
+            <ChevronLeft size={18} strokeWidth={2} />
           </button>
-        ) : (
-          <>
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--primary)' }}>
-                <span className="text-white font-black text-sm">P</span>
-              </div>
-              <div className="overflow-hidden">
-                <span className="font-black text-white text-sm truncate block">PGL CRM</span>
-                <p className="text-[9px] text-white/40 font-medium -mt-0.5">v2.0 2026</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setIsCollapsed(true)}
-              className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/10 transition-colors text-white/70 hover:text-white shrink-0 ml-1"
-            >
-              <ChevronLeft size={18} strokeWidth={2} />
-            </button>
-          </>
-        )}
+        </div>
+        </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-1 overflow-y-auto">
+      <nav className="flex-1 py-1 overflow-y-auto scrollbar-hide">
         {filteredMenuGroups.map((group, gi) => (
           <div key={group.title} className={gi > 0 ? 'mt-3' : 'mt-2'}>
-            {/* Group label */}
-            {!isCollapsed && (
-              <p className="px-5 py-2 text-[9px] font-black uppercase tracking-[0.15em] text-white/30">
-                {group.title}
-              </p>
-            )}
-            {isCollapsed && gi > 0 && (
-              <div className="mx-3 my-2 h-px bg-white/10" />
-            )}
+
+            {/* Group divider / label */}
+            <div className="relative h-7 flex items-center">
+              {/* Divider shown only when collapsed */}
+              <div
+                className="mx-3 h-px bg-white/10 w-full"
+                style={{
+                  opacity: isCollapsed ? 1 : 0,
+                  transition: 'opacity 280ms cubic-bezier(0.4, 0, 0.2, 1)',
+                  position: 'absolute',
+                  left: 0,
+                  right: 0,
+                }}
+              />
+              <div className="px-5 overflow-hidden">
+                <p className="text-[9px] font-black uppercase tracking-[0.15em] text-white/30" style={textStyle}>
+                  {group.title}
+                </p>
+              </div>
+            </div>
 
             <ul className="space-y-0.5 px-2">
               {group.items.map((item) => {
@@ -145,12 +163,13 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
                   <li key={item.id}>
                     <button
                       onClick={() => onTabChange(item.id)}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all"
+                      title={isCollapsed ? item.label : undefined}
+                      className="w-full flex items-center rounded-lg transition-colors overflow-hidden"
                       style={{
+                        padding: '10px 12px',
                         backgroundColor: isActive ? 'var(--sidebar-accent)' : 'transparent',
                         color: isActive ? 'var(--sidebar-accent-foreground)' : 'var(--sidebar-foreground)',
                       }}
-                      title={isCollapsed ? item.label : undefined}
                     >
                       <div className="relative shrink-0">
                         <Icon size={18} strokeWidth={isActive ? 2 : 1.5} />
@@ -163,8 +182,9 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
                           </span>
                         )}
                       </div>
-                      {!isCollapsed && (
-                        <span className="flex-1 flex items-center justify-between text-[13px]">
+
+                      <div className="ml-3 flex-1 items-start overflow-hidden">
+                        <span className="flex items-center gap-2 text-[13px]" style={textStyle}>
                           <span className={isActive ? 'font-black' : 'font-medium'}>{item.label}</span>
                           {item.badge && (
                             <span
@@ -175,7 +195,7 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
                             </span>
                           )}
                         </span>
-                      )}
+                      </div>
                     </button>
                   </li>
                 );
@@ -188,39 +208,42 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
       {/* Bottom: Settings */}
       {filteredBottomItems.length > 0 && (
         <div className="border-t px-2 py-3 shrink-0" style={{ borderColor: 'var(--sidebar-border)' }}>
-          {!isCollapsed && (
-            <p className="px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.15em] text-white/30">
-              Hệ thống
-            </p>
-          )}
+          <div className="h-7 flex items-center">
+            <div className="px-3 overflow-hidden">
+              <p className="text-[9px] font-black uppercase tracking-[0.15em] text-white/30" style={textStyle}>
+                Hệ thống
+              </p>
+            </div>
+          </div>
           <ul className="space-y-0.5">
             {filteredBottomItems.map((item) => {
               const Icon = item.icon;
-            const isActive = activeTab === item.id;
-            return (
-              <li key={item.id}>
-                <button
-                  onClick={() => onTabChange(item.id)}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all"
-                  style={{
-                    backgroundColor: isActive ? 'var(--sidebar-accent)' : 'transparent',
-                    color: isActive ? 'var(--sidebar-accent-foreground)' : 'var(--sidebar-foreground)',
-                  }}
-                  title={isCollapsed ? item.label : undefined}
-                >
-                  <Icon size={18} strokeWidth={isActive ? 2 : 1.5} />
-                  {!isCollapsed && (
-                    <span className={`text-[13px] ${isActive ? 'font-black' : 'font-medium'}`}>{item.label}</span>
-                  )}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
+              const isActive = activeTab === item.id;
+              return (
+                <li key={item.id}>
+                  <button
+                    onClick={() => onTabChange(item.id)}
+                    title={isCollapsed ? item.label : undefined}
+                    className="w-full flex items-center rounded-lg transition-colors overflow-hidden"
+                    style={{
+                      padding: '10px 12px',
+                      backgroundColor: isActive ? 'var(--sidebar-accent)' : 'transparent',
+                      color: isActive ? 'var(--sidebar-accent-foreground)' : 'var(--sidebar-foreground)',
+                    }}
+                  >
+                    <Icon size={18} strokeWidth={isActive ? 2 : 1.5} className="shrink-0" />
+                    <div className="ml-3 overflow-hidden">
+                      <span className={`text-[13px] ${isActive ? 'font-black' : 'font-medium'}`} style={textStyle}>
+                        {item.label}
+                      </span>
+                    </div>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       )}
-
-
     </div>
   );
 }

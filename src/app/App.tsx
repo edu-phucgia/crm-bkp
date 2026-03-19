@@ -1,9 +1,11 @@
-import { useState, useEffect, lazy, Suspense } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { LoadingScreen } from './components/LoadingScreen';
+import { useAuth } from './contexts/AuthContext';
 
+const LoginPage = lazy(() => import('../pages/auth/LoginPage'));
 const CustomerList = lazy(() => import('../pages/customers/CustomerList'));
 const CustomerDetail = lazy(() => import('../pages/customers/CustomerDetail'));
 const TeamDashboard = lazy(() => import('../pages/dashboard/TeamDashboard'));
@@ -12,30 +14,49 @@ const SLAMonitor = lazy(() => import('../pages/sla/SLAMonitor'));
 const Pipeline = lazy(() => import('../pages/pipeline/Pipeline'));
 const TaskList = lazy(() => import('../pages/tasks/TaskList'));
 const Settings = lazy(() => import('../pages/settings/Settings'));
+const UsersPage = lazy(() => import('../pages/users/UsersPage'));
 const ProfileView = lazy(() => import('./components/ProfileView').then(m => ({ default: m.ProfileView })));
 
 import { useNavigationStore, AppTab } from '../hooks/useNavigation';
 
+// Skeleton cùng màu nền — không flash khi lazy load lần đầu
+function PageSkeleton() {
+  return (
+    <div className="flex-1 p-6 space-y-4 animate-pulse" style={{ backgroundColor: 'var(--background)' }}>
+      <div className="h-8 w-48 rounded-xl bg-white/5" />
+      <div className="grid grid-cols-4 gap-4">
+        {[...Array(4)].map((_, i) => <div key={i} className="h-28 rounded-2xl bg-white/5" />)}
+      </div>
+      <div className="h-64 rounded-2xl bg-white/5" />
+    </div>
+  );
+}
+
 export default function App() {
-  const [loading, setLoading] = useState(true);
+  const { user, loading } = useAuth();
   const { activeTab, setActiveTab } = useNavigationStore();
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, []);
-
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+
+  // Chờ Supabase kiểm tra session (tránh flash màn hình login)
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  // Chưa đăng nhập → hiện trang Login
+  if (!user) {
+    return (
+      <Suspense fallback={<LoadingScreen />}>
+        <LoginPage />
+      </Suspense>
+    );
+  }
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab as AppTab);
-    setSelectedCustomerId(null); // clear detail when nav changes
+    setSelectedCustomerId(null);
   };
 
   const renderContent = () => {
-    // Customer detail overlay takes priority
     if (selectedCustomerId && activeTab === 'clients') {
       return (
         <CustomerDetail
@@ -68,25 +89,20 @@ export default function App() {
         return <TaskList />;
       case 'settings':
         return <Settings />;
+      case 'users':
+        return <UsersPage />;
       default:
         return <Dashboard />;
     }
   };
 
-  if (loading) {
-    return <LoadingScreen />;
-  }
-
   return (
     <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--background)' }}>
-      {/* Sidebar */}
       <Sidebar activeTab={activeTab} onTabChange={handleTabChange} />
-
-      {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header />
+          <Header />
         <main className="flex-1 overflow-y-auto">
-          <Suspense fallback={<LoadingScreen />}>
+          <Suspense fallback={<PageSkeleton />}>
             {renderContent()}
           </Suspense>
         </main>

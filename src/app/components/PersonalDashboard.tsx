@@ -235,8 +235,8 @@ export function PersonalDashboard() {
   const [taskModalOpen, setTaskModalOpen]     = useState(false);
   const [calendarModalOpen, setCalendarModalOpen] = useState(false);
 
-  const { data: statsData, isLoading: isLoadingStats } = useDashboardStats();
-  const { deals, isLoading: isLoadingDeals }           = usePipelineDeals({});
+  const { data: statsData, isLoading: isLoadingStats, isError: isErrorStats, error: errStats } = useDashboardStats();
+  const { deals, isLoading: isLoadingDeals, isError: isErrorDeals, error: errDeals }           = usePipelineDeals({});
   const { tasks, updateStatus }                        = useTasks();
 
   // Lock main scroller while any modal is open
@@ -312,6 +312,24 @@ export function PersonalDashboard() {
 
   if (isLoadingStats || isLoadingDeals) {
     return <ComponentLoading message="Đang cá nhân hóa dữ liệu của bạn..." size="lg" />;
+  }
+
+  if (isErrorStats || isErrorDeals) {
+    const msg = (errStats || errDeals) instanceof Error
+      ? (errStats || errDeals)!.message
+      : 'Không thể tải dữ liệu';
+    console.error('[PersonalDashboard] query error:', errStats, errDeals);
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-3 text-sm text-red-500">
+        <span>⚠ Lỗi tải dữ liệu: {msg}</span>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs"
+        >
+          Tải lại trang
+        </button>
+      </div>
+    );
   }
 
   const doneCount        = todayTasks.filter(t => t.status === 'done').length;
