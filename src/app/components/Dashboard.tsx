@@ -30,7 +30,7 @@ export function Dashboard() {
   if (!stats) return null;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 md:p-6 space-y-4 md:space-y-6">
       {/* Page header */}
       <div>
         <h1 className="text-2xl font-semibold" style={{ color: 'var(--foreground)' }}>
@@ -42,7 +42,7 @@ export function Dashboard() {
       </div>
 
       {/* Stats grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
         <StatCard
           title="Doanh thu tháng (VNĐ)"
           value={stats.kpi.monthlyRevenue.toLocaleString('vi-VN')}
@@ -78,7 +78,7 @@ export function Dashboard() {
       </div>
 
       {/* Charts row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-6">
         
         {/* Doanh thu 12 tháng */}
         <div className="lg:col-span-2 rounded-lg p-6 bg-white shadow-sm border border-slate-100">

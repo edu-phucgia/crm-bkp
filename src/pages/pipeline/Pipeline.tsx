@@ -95,7 +95,7 @@ function KanbanColumn({ id, label, color, deals, onAddDeal, onEditDeal, onDelete
   return (
     <div
       ref={setNodeRef}
-      className="flex flex-col w-[280px] shrink-0 bg-slate-100 rounded-xl border border-slate-200"
+      className="flex flex-col w-[240px] md:w-[280px] shrink-0 bg-slate-100 rounded-xl border border-slate-200"
     >
       <div
         className="px-4 py-3 rounded-t-xl border-b-2"
@@ -449,8 +449,8 @@ export default function Pipeline() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50 pt-6">
-      <div className="px-6 flex items-center justify-between mb-6 shrink-0">
+    <div className="flex flex-col h-screen bg-slate-50 pt-3 md:pt-6">
+      <div className="px-3 md:px-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 md:mb-6 shrink-0">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Pipeline Bán hàng</h1>
           <p className="text-sm text-slate-500">Quản lý cơ hội kinh doanh theo từng giai đoạn</p>
@@ -472,8 +472,8 @@ export default function Pipeline() {
       </div>
 
       {/* Filter Bar */}
-      <div className="px-6 pb-4 flex items-center gap-3 shrink-0">
-        <div className="relative w-[280px]">
+      <div className="px-3 md:px-6 pb-4 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 shrink-0">
+        <div className="relative w-full sm:w-[280px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
           <Input
             placeholder="Tìm deal, khách hàng..."
@@ -483,7 +483,7 @@ export default function Pipeline() {
           />
         </div>
         <Select value={filters.ownerId} onValueChange={val => setFilters({ ...filters, ownerId: val })}>
-          <SelectTrigger className="w-[180px] bg-white border-slate-200">
+          <SelectTrigger className="w-full sm:w-[180px] bg-white border-slate-200">
             <SelectValue placeholder="Nhân viên" />
           </SelectTrigger>
           <SelectContent>
@@ -494,7 +494,7 @@ export default function Pipeline() {
           </SelectContent>
         </Select>
         <Select value={filters.productType} onValueChange={val => setFilters({ ...filters, productType: val })}>
-          <SelectTrigger className="w-[150px] bg-white border-slate-200">
+          <SelectTrigger className="w-full sm:w-[150px] bg-white border-slate-200">
             <SelectValue placeholder="Loại sản phẩm" />
           </SelectTrigger>
           <SelectContent>
@@ -508,7 +508,7 @@ export default function Pipeline() {
       </div>
 
       {/* Kanban Board */}
-      <div className="flex-1 overflow-x-auto p-6 pt-0">
+      <div className="flex-1 overflow-x-auto p-3 md:p-6 pt-0">
         <div className="flex gap-4 h-full min-w-max">
           <DndContext
             sensors={sensors}

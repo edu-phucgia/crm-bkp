@@ -1,12 +1,16 @@
 import { useState, useRef, useEffect } from 'react';
-import { Search, Bell, User, ChevronDown, Check, Trash2, Shield, Users, UserCircle, LogOut } from 'lucide-react';
+import { Search, Bell, User, ChevronDown, Check, Trash2, Shield, Users, UserCircle, LogOut, Menu } from 'lucide-react';
 import { useAuth, UserRole } from '../contexts/AuthContext';
 import { useNotifications, AppNotification } from '../../hooks/useNotifications';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { useNavigationStore, AppTab } from '../../hooks/useNavigation';
 
-export function Header() {
+interface HeaderProps {
+  onMenuToggle?: () => void;
+}
+
+export function Header({ onMenuToggle }: HeaderProps) {
   const { user, activeRole, setRole, logout } = useAuth();
   const { notifications, markAsRead, markAllAsRead, getUnreadCount, removeNotification, addNotification } = useNotifications();
   const { setActiveTab } = useNavigationStore();
@@ -61,20 +65,29 @@ export function Header() {
   };
 
   return (
-    <header 
-      className="h-16 border-b flex items-center justify-between px-6 sticky top-0 z-50"
+    <header
+      className="h-16 border-b flex items-center justify-between px-3 md:px-6 sticky top-0 z-50"
       style={{
         backgroundColor: 'var(--card)',
         borderColor: 'var(--border)',
         boxShadow: 'var(--shadow-header)',
       }}
     >
+      {/* Hamburger — mobile only */}
+      <button
+        className="block md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors mr-2 shrink-0"
+        onClick={onMenuToggle}
+        aria-label="Toggle menu"
+      >
+        <Menu size={20} strokeWidth={1.5} />
+      </button>
+
       {/* Search */}
-      <div className="flex-1 max-w-md">
-        <div className="relative">
-          <Search 
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" 
-            size={18} 
+      <div className="hidden md:flex flex-1 max-w-md">
+        <div className="relative w-full">
+          <Search
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            size={18}
             strokeWidth={1.5}
           />
           <input
@@ -91,13 +104,13 @@ export function Header() {
       </div>
 
       {/* Right section */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 md:gap-4 ml-auto">
         {/* Notifications */}
         <div className="relative" ref={notificationRef}>
           <div className="flex items-center gap-2">
-            <button 
+            <button
               onClick={handleTestNotification}
-              className="text-[10px] px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-500 transition-colors"
+              className="hidden md:flex text-[10px] px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-500 transition-colors"
             >
               Test Alert
             </button>
@@ -120,9 +133,9 @@ export function Header() {
 
           {/* Notifications Dropdown */}
           {showNotifications && (
-            <div 
-              className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-top-2"
-              style={{ zIndex: 100 }}
+            <div
+              className="fixed inset-x-2 top-[4.25rem] md:absolute md:inset-auto md:right-0 md:top-auto md:mt-2 md:w-80 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-top-2"
+              style={{ zIndex: 200 }}
             >
               <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50/50">
                 <h3 className="font-semibold text-sm">Thông báo</h3>

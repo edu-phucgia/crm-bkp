@@ -16,6 +16,8 @@ import { useAuth } from '../contexts/AuthContext';
 interface SidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
 interface MenuItem {
@@ -30,8 +32,9 @@ interface MenuGroup {
   items: MenuItem[];
 }
 
-export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
+export function Sidebar({ activeTab, onTabChange, mobileOpen = false, onMobileClose }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
 
   const menuGroups: MenuGroup[] = [
     {
@@ -92,10 +95,11 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
 
   return (
     <div
-      className="h-screen flex flex-col overflow-hidden shrink-0"
+      className="h-screen flex flex-col overflow-hidden shrink-0 fixed inset-y-0 left-0 z-50 md:relative md:z-auto"
       style={{
         width: isCollapsed ? '60px' : '240px',
-        transition: 'width 280ms cubic-bezier(0.4, 0, 0.2, 1)',
+        transform: (isDesktop || mobileOpen) ? 'translateX(0)' : 'translateX(-100%)',
+        transition: 'width 280ms cubic-bezier(0.4, 0, 0.2, 1), transform 380ms cubic-bezier(0.22, 1, 0.36, 1)',
         backgroundColor: 'var(--sidebar)',
         color: 'var(--sidebar-foreground)',
         borderRight: '1px solid var(--sidebar-border)',
@@ -162,7 +166,7 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
                 return (
                   <li key={item.id}>
                     <button
-                      onClick={() => onTabChange(item.id)}
+                      onClick={() => { onTabChange(item.id); onMobileClose?.(); }}
                       title={isCollapsed ? item.label : undefined}
                       className="w-full flex items-center rounded-lg transition-colors overflow-hidden"
                       style={{
@@ -222,7 +226,7 @@ export function Sidebar({ activeTab, onTabChange }: SidebarProps) {
               return (
                 <li key={item.id}>
                   <button
-                    onClick={() => onTabChange(item.id)}
+                    onClick={() => { onTabChange(item.id); onMobileClose?.(); }}
                     title={isCollapsed ? item.label : undefined}
                     className="w-full flex items-center rounded-lg transition-colors overflow-hidden"
                     style={{

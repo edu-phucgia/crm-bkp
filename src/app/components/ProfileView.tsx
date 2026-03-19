@@ -67,11 +67,13 @@ export function ProfileView() {
         .from('profiles')
         .update({ name: name.trim(), phone: phone.trim() || null, avatar_initials: initials, updated_at: new Date().toISOString() })
         .eq('id', user.id);
-      if (error) throw error;
+      if (error) { console.error('Profile update error:', error); throw error; }
       await refreshProfile();
       toast.success('Cập nhật thông tin thành công');
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Lỗi cập nhật');
+      const msg = (err as any)?.message ?? (err as any)?.details ?? JSON.stringify(err);
+      console.error('Profile update caught:', err);
+      toast.error(msg || 'Lỗi cập nhật');
     } finally {
       setSavingInfo(false);
     }

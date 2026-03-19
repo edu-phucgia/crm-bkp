@@ -338,7 +338,7 @@ export function PersonalDashboard() {
   const tasksDoneCount   = tasks.filter(t => t.status === 'done').length;
 
   return (
-    <div className="p-6 space-y-6" style={{ backgroundColor: 'var(--background)' }}>
+    <div className="p-3 md:p-6 space-y-4 md:space-y-6" style={{ backgroundColor: 'var(--background)' }}>
 
       {/* ── HEADER ── */}
       <div>
@@ -351,9 +351,9 @@ export function PersonalDashboard() {
       </div>
 
       {/* ── TARGET PROGRESS ── */}
-      <div className="rounded-xl px-8 py-6" style={{ background: 'linear-gradient(135deg, #1A4F9C 0%, #0e3470 60%, #0b2554 100%)', boxShadow: '0 4px 20px rgba(26,79,156,0.35)' }}>
-        <div className="flex items-start justify-between gap-8">
-          <div className="flex-1">
+      <div className="rounded-xl px-4 py-4 md:px-8 md:py-6" style={{ background: 'linear-gradient(135deg, #1A4F9C 0%, #0e3470 60%, #0b2554 100%)', boxShadow: '0 4px 20px rgba(26,79,156,0.35)' }}>
+        <div className="flex flex-col md:flex-row items-stretch md:items-start md:justify-between gap-4 md:gap-8">
+          <div className="flex-1 w-full">
             <p className="text-white/70" style={{ fontSize: 'var(--text-sm)', fontWeight: 500 }}>
               Target tháng {now.getMonth() + 1}
             </p>
@@ -383,7 +383,7 @@ export function PersonalDashboard() {
               </div>
             </div>
           </div>
-          <div className="rounded-xl px-5 py-4 shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.1)', minWidth: 200 }}>
+          <div className="rounded-xl px-5 py-4 w-full md:w-auto md:shrink-0" style={{ backgroundColor: 'rgba(255,255,255,0.1)', minWidth: 0 }}>
             <div className="flex items-center gap-2 mb-3">
               <Clock size={15} strokeWidth={1.5} className="text-white/70" />
               <span className="text-white/70" style={{ fontSize: 'var(--text-sm)' }}>Thời gian còn lại</span>
@@ -400,7 +400,7 @@ export function PersonalDashboard() {
       </div>
 
       {/* ── CARDS ── */}
-      <div className="grid grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-5">
         {/* SLA */}
         <div className="rounded-lg p-5" style={{ backgroundColor: 'var(--card)', boxShadow: 'var(--shadow-card)' }}>
           <div className="flex items-start justify-between">
@@ -446,10 +446,10 @@ export function PersonalDashboard() {
       </div>
 
       {/* ── DEALS + TASKS/CALENDAR ── */}
-      <div className="grid gap-5" style={{ gridTemplateColumns: '1fr 1fr' }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-5">
 
         {/* LEFT: Deals */}
-        <div className="rounded-lg overflow-hidden flex flex-col h-[500px]" style={{ backgroundColor: 'var(--card)', boxShadow: 'var(--shadow-card)' }}>
+        <div className="rounded-lg overflow-hidden flex flex-col h-[400px] md:h-[500px]" style={{ backgroundColor: 'var(--card)', boxShadow: 'var(--shadow-card)' }}>
           <div className="px-5 py-4 border-b flex items-center justify-between shrink-0" style={{ borderColor: 'var(--border)' }}>
             <div>
               <h2 style={{ color: 'var(--foreground)', fontSize: 'var(--text-lg)' }}>Deals của tôi</h2>

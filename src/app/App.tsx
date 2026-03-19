@@ -36,6 +36,7 @@ export default function App() {
   const { user, loading } = useAuth();
   const { activeTab, setActiveTab } = useNavigationStore();
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Chờ Supabase kiểm tra session (tránh flash màn hình login)
   if (loading) {
@@ -98,9 +99,16 @@ export default function App() {
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--background)' }}>
-      <Sidebar activeTab={activeTab} onTabChange={handleTabChange} />
-      <div className="flex-1 flex flex-col overflow-hidden">
-          <Header />
+      <Sidebar activeTab={activeTab} onTabChange={handleTabChange} mobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        <Header onMenuToggle={() => setSidebarOpen(v => !v)} />
         <main className="flex-1 overflow-y-auto">
           <Suspense fallback={<PageSkeleton />}>
             {renderContent()}

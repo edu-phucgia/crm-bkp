@@ -99,8 +99,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        await syncUserFromSession(session);
+      (_event, session) => {
+        // Defer ra ngoài auth lock để tránh deadlock khi fetchProfile gọi supabase.from()
+        setTimeout(() => syncUserFromSession(session), 0);
       }
     );
 
